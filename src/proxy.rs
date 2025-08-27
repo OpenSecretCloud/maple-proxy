@@ -7,8 +7,8 @@ use axum::{
 };
 use futures::Stream;
 use opensecret::{
-    ChatCompletionChunk, ChatCompletionRequest, ModelsResponse,
-    OpenSecretClient, Result as OpenSecretResult,
+    ChatCompletionChunk, ChatCompletionRequest, ModelsResponse, OpenSecretClient,
+    Result as OpenSecretResult,
 };
 use std::{convert::Infallible, sync::Arc};
 use tracing::{debug, error};
@@ -32,12 +32,15 @@ pub async fn health_check() -> impl IntoResponse {
     }))
 }
 
-fn extract_api_key(headers: &HeaderMap, default_key: &Option<String>) -> Result<String, OpenAIError> {
+fn extract_api_key(
+    headers: &HeaderMap,
+    default_key: &Option<String>,
+) -> Result<String, OpenAIError> {
     // Try to get API key from Authorization header first
     if let Some(auth_header) = headers.get("authorization") {
-        let auth_str = auth_header
-            .to_str()
-            .map_err(|_| OpenAIError::authentication_error("Invalid Authorization header format"))?;
+        let auth_str = auth_header.to_str().map_err(|_| {
+            OpenAIError::authentication_error("Invalid Authorization header format")
+        })?;
 
         if let Some(key) = auth_str.strip_prefix("Bearer ") {
             return Ok(key.to_string());
@@ -59,13 +62,10 @@ async fn create_client_with_auth(
         .map_err(|e| OpenAIError::server_error(format!("Failed to create client: {}", e)))?;
 
     // Perform attestation handshake
-    client
-        .perform_attestation_handshake()
-        .await
-        .map_err(|e| {
-            error!("Attestation handshake failed: {}", e);
-            OpenAIError::server_error("Failed to establish secure connection with Maple backend")
-        })?;
+    client.perform_attestation_handshake().await.map_err(|e| {
+        error!("Attestation handshake failed: {}", e);
+        OpenAIError::server_error("Failed to establish secure connection with Maple backend")
+    })?;
 
     Ok(client)
 }
@@ -77,22 +77,25 @@ pub async fn list_models(
     let api_key = extract_api_key(&headers, &state.config.default_api_key)
         .map_err(|e| (StatusCode::UNAUTHORIZED, Json(e)))?;
 
-    debug!("Listing models for API key: {}...", &api_key[..8.min(api_key.len())]);
+    debug!(
+        "Listing models for API key: {}...",
+        &api_key[..8.min(api_key.len())]
+    );
 
     let client = create_client_with_auth(&state.config.backend_url, &api_key)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
 
-    let models = client
-        .get_models()
-        .await
-        .map_err(|e| {
-            error!("Failed to get models: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(OpenAIError::server_error(format!("Failed to retrieve models: {}", e))),
-            )
-        })?;
+    let models = client.get_models().await.map_err(|e| {
+        error!("Failed to get models: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(OpenAIError::server_error(format!(
+                "Failed to retrieve models: {}",
+                e
+            ))),
+        )
+    })?;
 
     debug!("Successfully retrieved {} models", models.data.len());
     Ok(Json(models))
@@ -139,19 +142,16 @@ pub async fn create_chat_completion(
         // Handle non-streaming response
         request.stream = Some(false); // Ensure it's explicitly false
 
-        let response = client
-            .create_chat_completion(request)
-            .await
-            .map_err(|e| {
-                error!("Failed to create chat completion: {}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(OpenAIError::server_error(format!(
-                        "Failed to create completion: {}",
-                        e
-                    ))),
-                )
-            })?;
+        let response = client.create_chat_completion(request).await.map_err(|e| {
+            error!("Failed to create chat completion: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(OpenAIError::server_error(format!(
+                    "Failed to create completion: {}",
+                    e
+                ))),
+            )
+        })?;
 
         debug!("Successfully created chat completion: {}", response.id);
         Ok(Json(response).into_response())
@@ -159,9 +159,7 @@ pub async fn create_chat_completion(
 }
 
 fn create_sse_stream(
-    mut stream: std::pin::Pin<
-        Box<dyn Stream<Item = OpenSecretResult<ChatCompletionChunk>> + Send>,
-    >,
+    mut stream: std::pin::Pin<Box<dyn Stream<Item = OpenSecretResult<ChatCompletionChunk>> + Send>>,
 ) -> impl Stream<Item = Result<axum::response::sse::Event, Infallible>> {
     async_stream::stream! {
         use futures::StreamExt;

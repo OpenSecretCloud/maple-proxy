@@ -28,7 +28,7 @@ Set environment variables or use command-line arguments:
 # Environment Variables
 export MAPLE_HOST=127.0.0.1                    # Server host (default: 127.0.0.1)
 export MAPLE_PORT=3000                         # Server port (default: 3000)
-export MAPLE_BACKEND_URL=http://localhost:3000         # Maple backend URL (dev: https://enclave.secretgpt.ai, prod: https://enclave.trymaple.ai)
+export MAPLE_BACKEND_URL=http://localhost:3000         # Maple backend URL (prod: https://enclave.trymaple.ai)
 export MAPLE_API_KEY=your-maple-api-key        # Default API key (optional)
 export MAPLE_DEBUG=true                        # Enable debug logging
 export MAPLE_ENABLE_CORS=true                  # Enable CORS
@@ -36,7 +36,7 @@ export MAPLE_ENABLE_CORS=true                  # Enable CORS
 
 Or use CLI arguments:
 ```bash
-cargo run -- --host 0.0.0.0 --port 8080 --backend-url https://enclave.secretgpt.ai
+cargo run -- --host 0.0.0.0 --port 8080 --backend-url https://enclave.trymaple.ai
 ```
 
 ## 🛠️ Usage

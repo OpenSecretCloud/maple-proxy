@@ -1,19 +1,4 @@
-mod config;
-mod proxy;
-
-use crate::config::Config;
-use crate::proxy::{ProxyState, create_chat_completion, health_check, list_models};
-use axum::{
-    http::Method,
-    routing::{get, post},
-    Router,
-};
-use std::sync::Arc;
-use tower::ServiceBuilder;
-use tower_http::{
-    cors::{Any, CorsLayer},
-    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
-};
+use maple_proxy::{create_app, Config};
 use tracing::{info, Level};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -37,56 +22,32 @@ async fn main() -> anyhow::Result<()> {
     info!("Version: {}", env!("CARGO_PKG_VERSION"));
     info!("Backend URL: {}", config.backend_url);
     info!("Binding to: {}", config.socket_addr()?);
-    
+
     if config.default_api_key.is_some() {
         info!("Default API key configured");
     } else {
         info!("No default API key - clients must provide Authorization header");
     }
 
-    let state = Arc::new(ProxyState::new(config.clone()));
+    // Build the application
+    let app = create_app(config.clone());
 
-    // Build the router
-    let mut app = Router::new()
-        // Health check endpoint
-        .route("/health", get(health_check))
-        .route("/", get(health_check))
-        
-        // OpenAI-compatible endpoints
-        .route("/v1/models", get(list_models))
-        .route("/v1/chat/completions", post(create_chat_completion))
-        
-        .with_state(state)
-        .layer(
-            ServiceBuilder::new()
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                        .on_response(DefaultOnResponse::new().level(Level::INFO)),
-                ),
-        );
-
-    // Add CORS if enabled
     if config.enable_cors {
         info!("CORS enabled for all origins");
-        app = app.layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-                .allow_headers(Any),
-        );
     }
 
     let listener = tokio::net::TcpListener::bind(config.socket_addr()?).await?;
-    
+
     info!("🚀 Maple Proxy Server started successfully!");
     info!("📋 Available endpoints:");
     info!("   GET  /health              - Health check");
-    info!("   GET  /v1/models           - List available models"); 
+    info!("   GET  /v1/models           - List available models");
     info!("   POST /v1/chat/completions - Create chat completions (streaming & non-streaming)");
     info!("");
     info!("💡 Usage:");
-    info!("   Set MAPLE_API_KEY environment variable or provide Authorization: Bearer <key> header");
+    info!(
+        "   Set MAPLE_API_KEY environment variable or provide Authorization: Bearer <key> header"
+    );
     info!("   Compatible with any OpenAI client library!");
     info!("");
     info!("🔗 Example curl:");

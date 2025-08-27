@@ -15,7 +15,11 @@ pub struct Config {
     pub port: u16,
 
     /// OpenSecret/Maple backend URL
-    #[arg(long, env = "MAPLE_BACKEND_URL", default_value = "https://enclave.trymaple.ai")]
+    #[arg(
+        long,
+        env = "MAPLE_BACKEND_URL",
+        default_value = "https://enclave.trymaple.ai"
+    )]
     pub backend_url: String,
 
     /// Default API key for Maple/OpenSecret (can be overridden by client Authorization header)
@@ -41,7 +45,7 @@ impl Config {
     pub fn load() -> Self {
         // Load from .env file if it exists
         let _ = dotenvy::dotenv();
-        
+
         Config::parse()
     }
 }
@@ -70,10 +74,6 @@ impl OpenAIError {
                 code: None,
             },
         }
-    }
-
-    pub fn invalid_request_error(message: impl Into<String>) -> Self {
-        Self::new(message, "invalid_request_error")
     }
 
     pub fn authentication_error(message: impl Into<String>) -> Self {
