@@ -15,8 +15,8 @@ name = "maple-proxy"
 path = "src/main.rs"
 
 [dependencies]
-# Local OpenSecret SDK dependency (latest unpublished changes)
-opensecret = { path = "../OpenSecret-SDK/rust" }
+# OpenSecret SDK 
+opensecret = "0.2.0"
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
