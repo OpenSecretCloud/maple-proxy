@@ -46,11 +46,12 @@ run:
     @echo "📝 Loading configuration from .env"
     @cargo run
 
-# Run with custom backend URL
+# Run with custom backend URL (preserves .env variables)
 run-with-backend url:
     @echo "🚀 Starting Maple Proxy server..."
     @echo "🔗 Backend: {{url}}"
-    MAPLE_BACKEND_URL={{url}} cargo run
+    @echo "📝 Loading other configs from .env"
+    @bash -c 'set -a; source .env 2>/dev/null; set +a; MAPLE_BACKEND_URL={{url}} cargo run'
 
 # Run pointing to local backend
 run-local:
