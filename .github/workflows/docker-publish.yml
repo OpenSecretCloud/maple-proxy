@@ -15,7 +15,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Docker registry names must be lowercase
+  IMAGE_NAME: opensecretcloud/maple-proxy
 
 jobs:
   build-and-push:
