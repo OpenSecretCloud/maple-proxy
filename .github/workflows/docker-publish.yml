@@ -21,6 +21,7 @@ env:
 jobs:
   build-and-push:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: linux/amd64
