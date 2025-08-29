@@ -44,7 +44,11 @@
         ];
         
         linuxOnlyInputs = with pkgs; [
-          # Add Linux-specific dependencies if needed
+          # Container runtime for Docker compatibility
+          podman
+          conmon
+          slirp4netns
+          fuse-overlayfs
         ];
         
         allInputs = commonInputs
@@ -74,6 +78,31 @@
             ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
               # Linux-specific setup
               export RUST_BACKTRACE=1
+              
+              # Podman as Docker replacement
+              alias docker='podman'
+              echo "Using 'podman' as an alias for 'docker'"
+              echo "You can now use 'docker' commands, which will be executed by podman"
+
+              # Podman configuration
+              export CONTAINERS_CONF=$HOME/.config/containers/containers.conf
+              export CONTAINERS_POLICY=$HOME/.config/containers/policy.json
+              mkdir -p $HOME/.config/containers
+              echo '{"default":[{"type":"insecureAcceptAnything"}]}' > $CONTAINERS_POLICY
+
+              # Create a basic containers.conf if it doesn't exist
+              if [ ! -f $CONTAINERS_CONF ]; then
+                echo "[engine]
+              cgroup_manager = \"cgroupfs\"
+              events_logger = \"file\"
+              runtime = \"crun\"
+
+              [storage]
+              driver = \"vfs\"" > $CONTAINERS_CONF
+              fi
+
+              # Ensure correct permissions
+              chmod 600 $CONTAINERS_POLICY $CONTAINERS_CONF 2>/dev/null || true
             ''}
           '';
         };

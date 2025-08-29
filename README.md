@@ -171,6 +171,101 @@ export MAPLE_ENABLE_CORS=true
 cargo run
 ```
 
+## 🐳 Docker Deployment
+
+### Quick Start with Docker
+
+```bash
+# Build the image
+just docker-build
+
+# Run the container
+just docker-run
+```
+
+### Production Docker Setup
+
+1. **Build the optimized image:**
+```bash
+docker build -t maple-proxy:latest .
+```
+
+2. **Run with docker-compose:**
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env with your configuration
+vim .env
+
+# Start the service
+docker-compose up -d
+```
+
+### 🔒 Security Note for Public Deployments
+
+When deploying Maple Proxy on a public network:
+
+- **DO NOT** set `MAPLE_API_KEY` in the container environment
+- Instead, require clients to pass their API key with each request:
+
+```python
+# Client-side authentication for public proxy
+client = OpenAI(
+    base_url="https://your-proxy.example.com/v1",
+    api_key="user-specific-maple-api-key"  # Each user provides their own key
+)
+```
+
+This ensures:
+- Users' API keys remain private
+- Multiple users can share the same proxy instance
+- No API keys are exposed in container configurations
+
+### Docker Commands
+
+```bash
+# Build image
+just docker-build
+
+# Run interactively
+just docker-run
+
+# Run in background
+just docker-run-detached
+
+# View logs
+just docker-logs
+
+# Stop container
+just docker-stop
+
+# Use docker-compose
+just compose-up
+just compose-logs
+just compose-down
+```
+
+### Container Configuration
+
+The Docker image:
+- Uses multi-stage builds for minimal size (~130MB)
+- Runs as non-root user for security
+- Includes health checks
+- Optimizes dependency caching with cargo-chef
+- Supports both x86_64 and ARM architectures
+
+### Environment Variables for Docker
+
+```yaml
+# docker-compose.yml environment section
+environment:
+  - MAPLE_BACKEND_URL=https://enclave.trymaple.ai  # Production backend
+  - MAPLE_ENABLE_CORS=true                         # Enable for web apps
+  - RUST_LOG=info                                  # Logging level
+  # - MAPLE_API_KEY=xxx                            # Only for private deployments!
+```
+
 ## 🔧 Development
 
 ### Build

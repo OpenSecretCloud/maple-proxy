@@ -1,6 +1,12 @@
 # Justfile for Maple Proxy
 # Development commands for the OpenAI-compatible proxy server
 
+# Load environment variables from .env file
+set dotenv-load
+
+# Set the container runtime (docker or podman)
+container := env_var_or_default("CONTAINER_RUNTIME", "podman")
+
 # Default command - show available commands
 default:
     @just --list
@@ -151,6 +157,7 @@ env:
     @echo "Rust version: $(rustc --version)"
     @echo "Cargo version: $(cargo --version)"
     @echo "Just version: $(just --version)"
+    @echo "Container runtime: {{container}} $({{container}} --version 2>/dev/null | head -1 || echo 'not installed')"
     @echo ""
     @echo "📋 Environment Variables:"
     @echo "MAPLE_HOST: ${MAPLE_HOST:-127.0.0.1}"
@@ -159,3 +166,66 @@ env:
     @echo "MAPLE_API_KEY: ${MAPLE_API_KEY:-[not set]}"
     @echo "MAPLE_DEBUG: ${MAPLE_DEBUG:-false}"
     @echo "MAPLE_ENABLE_CORS: ${MAPLE_ENABLE_CORS:-false}"
+
+# Build Docker image
+docker-build:
+    @echo "🐳 Building Docker image with {{container}}..."
+    @{{container}} build -t maple-proxy:latest .
+    @echo "✅ Docker image built: maple-proxy:latest"
+
+# Run Docker container
+docker-run:
+    @echo "🚀 Running Docker container with {{container}}..."
+    @{{container}} run --rm -it \
+        -p ${MAPLE_PORT:-8080}:8080 \
+        -e MAPLE_API_KEY=${MAPLE_API_KEY} \
+        -e MAPLE_BACKEND_URL=${MAPLE_BACKEND_URL:-https://enclave.trymaple.ai} \
+        -e MAPLE_DEBUG=${MAPLE_DEBUG:-false} \
+        -e MAPLE_ENABLE_CORS=${MAPLE_ENABLE_CORS:-true} \
+        maple-proxy:latest
+
+# Run Docker container in detached mode
+docker-run-detached:
+    @echo "🚀 Running Docker container in background with {{container}}..."
+    @{{container}} run -d \
+        --name maple-proxy \
+        -p ${MAPLE_PORT:-8080}:8080 \
+        -e MAPLE_API_KEY=${MAPLE_API_KEY} \
+        -e MAPLE_BACKEND_URL=${MAPLE_BACKEND_URL:-https://enclave.trymaple.ai} \
+        -e MAPLE_DEBUG=${MAPLE_DEBUG:-false} \
+        -e MAPLE_ENABLE_CORS=${MAPLE_ENABLE_CORS:-true} \
+        maple-proxy:latest
+    @echo "✅ Container started. Use 'just docker-stop' to stop it."
+
+# Stop Docker container
+docker-stop:
+    @echo "🛑 Stopping Docker container..."
+    @{{container}} stop maple-proxy 2>/dev/null || echo "Container not running"
+    @{{container}} rm maple-proxy 2>/dev/null || true
+    @echo "✅ Container stopped"
+
+# View Docker logs
+docker-logs:
+    @{{container}} logs -f maple-proxy 2>/dev/null || echo "Container not running"
+
+# Run with docker-compose
+compose-up:
+    @echo "🚀 Starting services with docker-compose..."
+    @{{container}}-compose up -d
+    @echo "✅ Services started. Use 'just compose-down' to stop."
+
+# Stop docker-compose services
+compose-down:
+    @echo "🛑 Stopping services..."
+    @{{container}}-compose down
+    @echo "✅ Services stopped"
+
+# View docker-compose logs
+compose-logs:
+    @{{container}}-compose logs -f
+
+# Clean Docker images
+docker-clean:
+    @echo "🧹 Cleaning Docker images..."
+    @{{container}} rmi maple-proxy:latest 2>/dev/null || true
+    @echo "✅ Docker images cleaned"
