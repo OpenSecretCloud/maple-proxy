@@ -19,7 +19,15 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-22.04-arm64-4core
+    
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -53,12 +61,14 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-
+          flavor: |
+            suffix=-${{ matrix.platform == 'linux/arm64' && 'arm64' || 'amd64' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -66,9 +76,76 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.platform == 'linux/arm64' && 'arm64' || 'amd64' }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-manifests:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
       - name: Generate image summary
-        if: github.event_name != 'pull_request'
         run: |
           echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
