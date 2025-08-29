@@ -229,3 +229,30 @@ docker-clean:
     @echo "🧹 Cleaning Docker images..."
     @{{container}} rmi maple-proxy:latest 2>/dev/null || true
     @echo "✅ Docker images cleaned"
+
+# Push to GitHub Container Registry
+ghcr-push tag="latest":
+    @echo "📦 Pushing to GitHub Container Registry..."
+    @{{container}} tag maple-proxy:latest ghcr.io/opensecretcloud/maple-proxy:{{tag}}
+    @{{container}} push ghcr.io/opensecretcloud/maple-proxy:{{tag}}
+    @echo "✅ Pushed to ghcr.io/opensecretcloud/maple-proxy:{{tag}}"
+
+# Build and push to GHCR
+ghcr-build-push tag="latest":
+    @echo "🐳 Building and pushing to GHCR..."
+    @{{container}} build -t ghcr.io/opensecretcloud/maple-proxy:{{tag}} .
+    @{{container}} push ghcr.io/opensecretcloud/maple-proxy:{{tag}}
+    @echo "✅ Image available at ghcr.io/opensecretcloud/maple-proxy:{{tag}}"
+
+# Login to GitHub Container Registry (requires PAT token)
+ghcr-login:
+    @echo "🔐 Logging in to GitHub Container Registry..."
+    @echo "Please ensure you have a GitHub Personal Access Token with 'write:packages' scope"
+    @echo "${GITHUB_TOKEN}" | {{container}} login ghcr.io -u ${GITHUB_USER} --password-stdin
+    @echo "✅ Logged in to ghcr.io"
+
+# Pull from GitHub Container Registry
+ghcr-pull tag="latest":
+    @echo "📥 Pulling from GitHub Container Registry..."
+    @{{container}} pull ghcr.io/opensecretcloud/maple-proxy:{{tag}}
+    @echo "✅ Pulled ghcr.io/opensecretcloud/maple-proxy:{{tag}}"

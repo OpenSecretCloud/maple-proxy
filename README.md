@@ -173,10 +173,24 @@ cargo run
 
 ## 🐳 Docker Deployment
 
-### Quick Start with Docker
+### Quick Start with Pre-built Image
+
+Pull and run the official image from GitHub Container Registry:
 
 ```bash
-# Build the image
+# Pull the latest image
+docker pull ghcr.io/opensecretcloud/maple-proxy:latest
+
+# Run with your API key
+docker run -p 8080:8080 \
+  -e MAPLE_BACKEND_URL=https://enclave.trymaple.ai \
+  ghcr.io/opensecretcloud/maple-proxy:latest
+```
+
+### Build from Source
+
+```bash
+# Build the image locally
 just docker-build
 
 # Run the container
@@ -185,12 +199,18 @@ just docker-run
 
 ### Production Docker Setup
 
-1. **Build the optimized image:**
+1. **Option A: Use pre-built image from GHCR**
+```bash
+# In your docker-compose.yml, use:
+image: ghcr.io/opensecretcloud/maple-proxy:latest
+```
+
+2. **Option B: Build your own image**
 ```bash
 docker build -t maple-proxy:latest .
 ```
 
-2. **Run with docker-compose:**
+3. **Run with docker-compose:**
 ```bash
 # Copy the example environment file
 cp .env.example .env
@@ -268,7 +288,25 @@ environment:
 
 ## 🔧 Development
 
-### Build
+### Docker Images & CI/CD
+
+**Automated Builds (GitHub Actions)**
+- Every push to `master` automatically builds and publishes to `ghcr.io/opensecretcloud/maple-proxy:latest`
+- Git tags (e.g., `v1.0.0`) trigger versioned releases
+- Multi-platform images (linux/amd64, linux/arm64) built automatically
+- No manual intervention needed - just push your code!
+
+**Local Development (Justfile)**
+```bash
+# For local testing and debugging
+just docker-build        # Build locally
+just docker-run          # Test locally
+just ghcr-push v1.2.3   # Manual push (requires login)
+```
+
+Use GitHub Actions for production releases, Justfile for local development.
+
+### Build from Source
 ```bash
 cargo build
 ```
