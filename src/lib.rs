@@ -1,7 +1,7 @@
 pub mod config;
 pub mod proxy;
 
-pub use config::Config;
+pub use config::{Config, OpenAIError, OpenAIErrorDetails};
 use proxy::{create_chat_completion, health_check, list_models, ProxyState};
 
 use axum::{

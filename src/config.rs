@@ -48,6 +48,36 @@ impl Config {
 
         Config::parse()
     }
+
+    /// Create a new Config programmatically (for library usage)
+    pub fn new(host: String, port: u16, backend_url: String) -> Self {
+        Self {
+            host,
+            port,
+            backend_url,
+            default_api_key: None,
+            debug: false,
+            enable_cors: false,
+        }
+    }
+
+    /// Builder-style method to set the API key
+    pub fn with_api_key(mut self, api_key: String) -> Self {
+        self.default_api_key = Some(api_key);
+        self
+    }
+
+    /// Builder-style method to enable debug mode
+    pub fn with_debug(mut self, debug: bool) -> Self {
+        self.debug = debug;
+        self
+    }
+
+    /// Builder-style method to enable CORS
+    pub fn with_cors(mut self, enable_cors: bool) -> Self {
+        self.enable_cors = enable_cors;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
