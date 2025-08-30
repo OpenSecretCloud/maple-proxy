@@ -1,6 +1,6 @@
 [package]
 name = "maple-proxy"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["OpenSecret"]
 description = "Lightweight OpenAI-compatible proxy server for Maple/OpenSecret TEE infrastructure"
@@ -24,7 +24,7 @@ opensecret = "0.2.0"
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
-tokio = { version = "1.47", features = ["full"] }
+tokio = { version = "1.47", features = ["net", "rt-multi-thread", "macros"] }
 tower = { version = "0.5.2", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 
