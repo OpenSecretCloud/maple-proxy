@@ -20,7 +20,7 @@ path = "src/main.rs"
 
 [dependencies]
 # OpenSecret SDK 
-opensecret = "0.2.1"
+opensecret = "0.2.2"
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
@@ -42,7 +42,7 @@ dotenvy = "0.15"
 
 # Utilities
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 anyhow = "1.0"
 
 # HTTP types and headers
