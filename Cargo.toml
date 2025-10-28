@@ -42,7 +42,7 @@ dotenvy = "0.15"
 
 # Utilities
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 anyhow = "1.0"
 
 # HTTP types and headers
