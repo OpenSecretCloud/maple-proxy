@@ -16,22 +16,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Cache cargo-audit
-        uses: actions/cache@v4
-        id: cache-audit
-        with:
-          path: ~/.cargo/bin/cargo-audit
-          key: cargo-audit-${{ runner.os }}
-
-      - name: Install cargo-audit
-        if: steps.cache-audit.outputs.cache-hit != 'true'
-        run: cargo install cargo-audit
-
       - name: Run security audit
-        run: cargo audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   dependency_check:
     runs-on: ubuntu-latest
