@@ -2,7 +2,7 @@ pub mod config;
 pub mod proxy;
 
 pub use config::{Config, OpenAIError, OpenAIErrorDetails};
-use proxy::{create_chat_completion, health_check, list_models, ProxyState};
+use proxy::{create_chat_completion, create_embeddings, health_check, list_models, ProxyState};
 
 use axum::{
     http::Method,
@@ -28,6 +28,7 @@ pub fn create_app(config: Config) -> Router {
         // OpenAI-compatible endpoints
         .route("/v1/models", get(list_models))
         .route("/v1/chat/completions", post(create_chat_completion))
+        .route("/v1/embeddings", post(create_embeddings))
         .with_state(state)
         .layer(
             ServiceBuilder::new().layer(

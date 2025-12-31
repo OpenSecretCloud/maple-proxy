@@ -7,8 +7,8 @@ use axum::{
 };
 use futures::Stream;
 use opensecret::{
-    ChatCompletionChunk, ChatCompletionRequest, ModelsResponse, OpenSecretClient,
-    Result as OpenSecretResult,
+    ChatCompletionChunk, ChatCompletionRequest, EmbeddingRequest, EmbeddingResponse,
+    ModelsResponse, OpenSecretClient, Result as OpenSecretResult,
 };
 use std::{convert::Infallible, sync::Arc};
 use tracing::{debug, error};
@@ -197,4 +197,36 @@ fn create_sse_stream(
             .data("[DONE]");
         yield Ok(done_event);
     }
+}
+
+pub async fn create_embeddings(
+    State(state): State<Arc<ProxyState>>,
+    headers: HeaderMap,
+    Json(request): Json<EmbeddingRequest>,
+) -> Result<Json<EmbeddingResponse>, (StatusCode, Json<OpenAIError>)> {
+    let api_key = extract_api_key(&headers, &state.config.default_api_key)
+        .map_err(|e| (StatusCode::UNAUTHORIZED, Json(e)))?;
+
+    debug!("Embeddings request for model: {}", request.model);
+
+    let client = create_client_with_auth(&state.config.backend_url, &api_key)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
+
+    let response = client.create_embeddings(request).await.map_err(|e| {
+        error!("Failed to create embeddings: {}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(OpenAIError::server_error(format!(
+                "Failed to create embeddings: {}",
+                e
+            ))),
+        )
+    })?;
+
+    debug!(
+        "Successfully created embeddings with {} vectors",
+        response.data.len()
+    );
+    Ok(Json(response))
 }
