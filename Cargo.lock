@@ -1508,9 +1508,9 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "opensecret"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68faccec2c0b03eefcc94985c01730d1f50b5ff98684c1afec367ba8301b144c"
+checksum = "edc8e627441c9960de937e2444fd42fc6389fab51e68927bbb2d4e4840020c53"
 dependencies = [
  "anyhow",
  "async-trait",
