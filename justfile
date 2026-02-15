@@ -256,3 +256,51 @@ ghcr-pull tag="latest":
     @echo "📥 Pulling from GitHub Container Registry..."
     @{{container}} pull ghcr.io/opensecretcloud/maple-proxy:{{tag}}
     @echo "✅ Pulled ghcr.io/opensecretcloud/maple-proxy:{{tag}}"
+
+# === OpenClaw Plugin ===
+
+# Install plugin dependencies
+plugin-install:
+    @echo "📦 Installing plugin dependencies..."
+    @cd openclaw-plugin && npm install
+    @echo "✅ Plugin dependencies installed"
+
+# Build plugin (TypeScript -> JS)
+plugin-build:
+    @echo "🔨 Building OpenClaw plugin..."
+    @cd openclaw-plugin && npm run build
+    @echo "✅ Plugin built"
+
+# Lint plugin
+plugin-lint:
+    @echo "🔍 Linting plugin..."
+    @cd openclaw-plugin && npm run lint
+    @echo "✅ Plugin linted"
+
+# Test plugin
+plugin-test:
+    @echo "🧪 Testing plugin..."
+    @cd openclaw-plugin && npm test
+    @echo "✅ Plugin tests passed"
+
+# Check all (Rust + plugin)
+check-all: check plugin-lint plugin-test
+    @echo "✅ All checks passed (Rust + Plugin)"
+
+# Link plugin locally for OpenClaw development
+plugin-link:
+    @echo "🔗 Linking plugin to OpenClaw extensions..."
+    @openclaw plugins install -l ./openclaw-plugin
+    @echo "✅ Plugin linked"
+
+# Pack plugin for npm publishing
+plugin-pack:
+    @echo "📦 Packing plugin for npm..."
+    @cd openclaw-plugin && npm pack
+    @echo "✅ Plugin packed"
+
+# Publish plugin to npm
+plugin-publish:
+    @echo "🚀 Publishing plugin to npm..."
+    @cd openclaw-plugin && npm publish --access public
+    @echo "✅ Plugin published"
