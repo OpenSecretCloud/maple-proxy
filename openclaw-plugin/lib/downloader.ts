@@ -14,6 +14,9 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+const VERSION_CHECK_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_KEPT_VERSIONS = 2; // current + one previous
+
 async function downloadFile(url: string, dest: string): Promise<void> {
   const res = await fetch(url, { redirect: "follow" });
   if (!res.ok) {
@@ -26,12 +29,10 @@ async function downloadFile(url: string, dest: string): Promise<void> {
 async function verifyChecksum(filePath: string, checksumUrl: string): Promise<void> {
   const res = await fetch(checksumUrl, { redirect: "follow" });
   if (!res.ok) {
-    // Checksum file may not exist for older releases; warn but don't fail
     return;
   }
 
   const expectedLine = (await res.text()).trim();
-  // Format: "<hash>  <filename>" or just "<hash>"
   const expectedHash = expectedLine.split(/\s+/)[0];
 
   const { createHash } = await import("node:crypto");
@@ -62,17 +63,97 @@ async function extractZip(archivePath: string, destDir: string): Promise<void> {
   }
 }
 
+async function resolveVersion(
+  logger: { info: (msg: string) => void },
+  pinnedVersion?: string
+): Promise<string> {
+  if (pinnedVersion) {
+    return pinnedVersion;
+  }
+
+  const cacheDir = getCacheDir();
+  const cacheFile = path.join(cacheDir, ".latest-version");
+
+  try {
+    const stat = await fsp.stat(cacheFile);
+    const age = Date.now() - stat.mtimeMs;
+    if (age < VERSION_CHECK_TTL_MS) {
+      const cached = (await fsp.readFile(cacheFile, "utf-8")).trim();
+      if (cached) {
+        logger.info(`Using cached latest version: ${cached} (checked ${Math.round(age / 60000)}m ago)`);
+        return cached;
+      }
+    }
+  } catch {
+    // No cache file or unreadable
+  }
+
+  logger.info("Checking GitHub for latest maple-proxy release...");
+  const version = await getLatestVersion();
+
+  await fsp.mkdir(cacheDir, { recursive: true });
+  await fsp.writeFile(cacheFile, version, "utf-8");
+
+  return version;
+}
+
+async function cleanupOldVersions(
+  currentVersion: string,
+  logger: { info: (msg: string) => void }
+): Promise<void> {
+  const cacheDir = getCacheDir();
+
+  let entries: string[];
+  try {
+    entries = await fsp.readdir(cacheDir);
+  } catch {
+    return;
+  }
+
+  // Filter to version directories (start with "v")
+  const versionDirs = entries
+    .filter((e) => e.startsWith("v"))
+    .sort()
+    .reverse();
+
+  if (versionDirs.length <= MAX_KEPT_VERSIONS) {
+    return;
+  }
+
+  // Always keep the current version; keep most recent others up to MAX_KEPT_VERSIONS
+  const toKeep = new Set<string>([currentVersion]);
+  for (const dir of versionDirs) {
+    if (toKeep.size >= MAX_KEPT_VERSIONS) break;
+    toKeep.add(dir);
+  }
+
+  for (const dir of versionDirs) {
+    if (toKeep.has(dir)) continue;
+    const dirPath = path.join(cacheDir, dir);
+    try {
+      await fsp.rm(dirPath, { recursive: true, force: true });
+      logger.info(`Cleaned up old maple-proxy version: ${dir}`);
+    } catch {
+      // Best-effort cleanup
+    }
+  }
+}
+
 export interface DownloadResult {
   binaryPath: string;
   version: string;
 }
 
-export async function ensureBinary(logger: { info: (msg: string) => void }): Promise<DownloadResult> {
-  const version = await getLatestVersion();
+export async function ensureBinary(
+  logger: { info: (msg: string) => void },
+  pinnedVersion?: string
+): Promise<DownloadResult> {
+  const version = await resolveVersion(logger, pinnedVersion);
   const binaryPath = getBinaryPath(version);
 
   if (fs.existsSync(binaryPath)) {
     logger.info(`maple-proxy ${version} already cached at ${binaryPath}`);
+    await cleanupOldVersions(version, logger);
     return { binaryPath, version };
   }
 
@@ -105,5 +186,6 @@ export async function ensureBinary(logger: { info: (msg: string) => void }): Pro
   }
 
   logger.info(`maple-proxy ${version} ready at ${binaryPath}`);
+  await cleanupOldVersions(version, logger);
   return { binaryPath, version };
 }

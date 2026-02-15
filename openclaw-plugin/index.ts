@@ -6,6 +6,7 @@ interface PluginConfig {
   port?: number;
   backendUrl?: string;
   debug?: boolean;
+  version?: string;
 }
 
 interface PluginApi {
@@ -40,7 +41,10 @@ export default function register(api: PluginApi) {
       }
 
       try {
-        const { binaryPath, version } = await ensureBinary(api.logger);
+        const { binaryPath, version } = await ensureBinary(
+          api.logger,
+          pluginConfig.version
+        );
         api.logger.info(`maple-proxy binary: ${version} at ${binaryPath}`);
 
         proxy = await startProxy(

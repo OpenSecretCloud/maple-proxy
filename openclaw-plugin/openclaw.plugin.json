@@ -10,7 +10,8 @@
       "apiKey": { "type": "string" },
       "port": { "type": "number" },
       "backendUrl": { "type": "string" },
-      "debug": { "type": "boolean" }
+      "debug": { "type": "boolean" },
+      "version": { "type": "string" }
     },
     "required": ["apiKey"]
   },
@@ -18,7 +19,8 @@
     "apiKey": { "label": "Maple API Key", "sensitive": true },
     "port": { "label": "Local Port", "placeholder": "8080" },
     "backendUrl": { "label": "Backend URL", "placeholder": "https://enclave.trymaple.ai" },
-    "debug": { "label": "Debug Logging" }
+    "debug": { "label": "Debug Logging" },
+    "version": { "label": "Binary Version", "placeholder": "latest" }
   },
   "skills": ["./skills/maple-proxy-skill"]
 }
