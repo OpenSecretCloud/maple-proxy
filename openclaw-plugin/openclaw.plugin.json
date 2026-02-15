@@ -1,5 +1,5 @@
 {
-  "id": "maple-proxy-openclaw-plugin",
+  "id": "maple-openclaw-plugin",
   "name": "Maple Proxy",
   "description": "Run Maple TEE-backed AI models locally via maple-proxy",
   "version": "0.1.0",
@@ -17,7 +17,7 @@
   },
   "uiHints": {
     "apiKey": { "label": "Maple API Key", "sensitive": true },
-    "port": { "label": "Local Port", "placeholder": "8080" },
+    "port": { "label": "Local Port", "placeholder": "8000" },
     "backendUrl": { "label": "Backend URL", "placeholder": "https://enclave.trymaple.ai" },
     "debug": { "label": "Debug Logging" },
     "version": { "label": "Binary Version", "placeholder": "latest" }

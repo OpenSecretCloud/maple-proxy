@@ -1,5 +1,5 @@
 {
-  "name": "@opensecret/maple-proxy-openclaw-plugin",
+  "name": "@opensecret/maple-openclaw-plugin",
   "version": "0.1.0",
   "description": "OpenClaw plugin that runs Maple TEE-backed AI models via maple-proxy",
   "license": "MIT",

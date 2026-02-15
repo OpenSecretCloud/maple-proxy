@@ -17,25 +17,92 @@ interface PluginApi {
     start: () => Promise<void>;
     stop: () => Promise<void>;
   }) => void;
+  registerTool: (
+    tool: {
+      name: string;
+      description: string;
+      parameters: Record<string, unknown>;
+      execute: (
+        id: string,
+        params: Record<string, unknown>
+      ) => Promise<{ content: Array<{ type: string; text: string }> }>;
+    },
+    opts?: { optional?: boolean }
+  ) => void;
 }
 
-export const id = "maple-proxy-openclaw-plugin";
+export const id = "maple-openclaw-plugin";
 export const name = "Maple Proxy";
+
+const PLUGIN_CONFIG_KEY = "maple-openclaw-plugin";
 
 export default function register(api: PluginApi) {
   let proxy: RunningProxy | null = null;
+
+  api.registerTool({
+    name: "maple_proxy_status",
+    description:
+      "Check the status of the local maple-proxy server. " +
+      "Returns the port, version, and health status.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+    async execute() {
+      if (!proxy) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                running: false,
+                error: "maple-proxy is not running",
+              }),
+            },
+          ],
+        };
+      }
+
+      let healthy = false;
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:${proxy.port}/health`
+        );
+        healthy = res.ok;
+      } catch {
+        // Not healthy
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              running: true,
+              healthy,
+              port: proxy.port,
+              version: proxy.version,
+              endpoint: `http://127.0.0.1:${proxy.port}/v1`,
+              modelsUrl: `http://127.0.0.1:${proxy.port}/v1/models`,
+              chatUrl: `http://127.0.0.1:${proxy.port}/v1/chat/completions`,
+            }),
+          },
+        ],
+      };
+    },
+  });
 
   api.registerService({
     id: "maple-proxy-service",
 
     async start() {
       const pluginConfig =
-        api.config.plugins.entries["maple-proxy-openclaw-plugin"]?.config;
+        api.config.plugins.entries[PLUGIN_CONFIG_KEY]?.config;
 
       if (!pluginConfig?.apiKey) {
         api.logger.error(
-          "maple-proxy-openclaw-plugin: no apiKey configured. " +
-            'Set plugins.entries["maple-proxy-openclaw-plugin"].config.apiKey in openclaw.json'
+          `${PLUGIN_CONFIG_KEY}: no apiKey configured. ` +
+            `Set plugins.entries["${PLUGIN_CONFIG_KEY}"].config.apiKey in openclaw.json`
         );
         return;
       }
@@ -55,11 +122,17 @@ export default function register(api: PluginApi) {
             backendUrl: pluginConfig.backendUrl,
             debug: pluginConfig.debug,
           },
+          version,
           api.logger
+        );
+
+        api.logger.info(
+          `maple-proxy is OpenAI-compatible at http://127.0.0.1:${proxy.port}/v1 ` +
+            `-- configure as vLLM provider or use directly`
         );
       } catch (err) {
         api.logger.error(
-          `maple-proxy-openclaw-plugin: failed to start: ${err instanceof Error ? err.message : err}`
+          `${PLUGIN_CONFIG_KEY}: failed to start: ${err instanceof Error ? err.message : err}`
         );
       }
     },

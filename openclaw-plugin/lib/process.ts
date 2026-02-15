@@ -1,6 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import net from "node:net";
 
+const DEFAULT_PORT = 8000;
+const HEALTH_TIMEOUT_MS = 10000;
+const MAX_RESTART_ATTEMPTS = 3;
+const RESTART_BACKOFF_MS = 2000;
+
 export interface ProxyConfig {
   binaryPath: string;
   apiKey: string;
@@ -12,33 +17,23 @@ export interface ProxyConfig {
 export interface RunningProxy {
   process: ChildProcess;
   port: number;
+  version: string;
   kill: () => void;
 }
 
-async function findFreePort(preferred: number): Promise<number> {
-  return new Promise((resolve, reject) => {
+function checkPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
     const server = net.createServer();
-    server.listen(preferred, "127.0.0.1", () => {
-      const addr = server.address();
-      const port = typeof addr === "object" && addr ? addr.port : preferred;
-      server.close(() => resolve(port));
+    server.listen(port, "127.0.0.1", () => {
+      server.close(() => resolve(true));
     });
-    server.on("error", () => {
-      // Preferred port busy, let OS pick one
-      const fallback = net.createServer();
-      fallback.listen(0, "127.0.0.1", () => {
-        const addr = fallback.address();
-        const port = typeof addr === "object" && addr ? addr.port : 0;
-        fallback.close(() => resolve(port));
-      });
-      fallback.on("error", reject);
-    });
+    server.on("error", () => resolve(false));
   });
 }
 
-async function waitForHealth(port: number, timeoutMs: number = 10000): Promise<void> {
+async function waitForHealth(port: number): Promise<void> {
   const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
+  while (Date.now() - start < HEALTH_TIMEOUT_MS) {
     try {
       const res = await fetch(`http://127.0.0.1:${port}/health`);
       if (res.ok) return;
@@ -47,17 +42,16 @@ async function waitForHealth(port: number, timeoutMs: number = 10000): Promise<v
     }
     await new Promise((r) => setTimeout(r, 200));
   }
-  throw new Error(`maple-proxy did not become healthy within ${timeoutMs}ms`);
+  throw new Error(`maple-proxy did not become healthy within ${HEALTH_TIMEOUT_MS}ms`);
 }
 
-export async function startProxy(
+function spawnProxy(
   config: ProxyConfig,
+  port: number,
   logger: { info: (msg: string) => void; error: (msg: string) => void }
-): Promise<RunningProxy> {
-  const port = await findFreePort(config.port ?? 8080);
-
+): ChildProcess {
   const env: Record<string, string> = {
-    ...process.env as Record<string, string>,
+    ...(process.env as Record<string, string>),
     MAPLE_HOST: "127.0.0.1",
     MAPLE_PORT: String(port),
     MAPLE_API_KEY: config.apiKey,
@@ -73,7 +67,6 @@ export async function startProxy(
   const child = spawn(config.binaryPath, [], {
     env,
     stdio: ["ignore", "pipe", "pipe"],
-    detached: false,
   });
 
   child.stdout?.on("data", (data: Buffer) => {
@@ -84,11 +77,67 @@ export async function startProxy(
     logger.error(`[maple-proxy] ${data.toString().trim()}`);
   });
 
-  child.on("exit", (code) => {
-    if (code !== null && code !== 0) {
-      logger.error(`maple-proxy exited with code ${code}`);
-    }
-  });
+  return child;
+}
+
+export async function startProxy(
+  config: ProxyConfig,
+  version: string,
+  logger: { info: (msg: string) => void; error: (msg: string) => void }
+): Promise<RunningProxy> {
+  const port = config.port ?? DEFAULT_PORT;
+
+  const available = await checkPortAvailable(port);
+  if (!available) {
+    throw new Error(
+      `Port ${port} is already in use. ` +
+        `Set a different port in plugins.entries["maple-openclaw-plugin"].config.port`
+    );
+  }
+
+  let child = spawnProxy(config, port, logger);
+  let stopped = false;
+  let restartAttempts = 0;
+
+  const setupCrashRecovery = (proc: ChildProcess) => {
+    proc.on("exit", (code, signal) => {
+      if (stopped) return;
+      if (signal === "SIGINT" || signal === "SIGTERM") return;
+
+      if (code !== null && code !== 0) {
+        logger.error(`maple-proxy crashed with code ${code}`);
+
+        if (restartAttempts < MAX_RESTART_ATTEMPTS) {
+          restartAttempts++;
+          const delay = RESTART_BACKOFF_MS * restartAttempts;
+          logger.info(
+            `Restarting maple-proxy in ${delay}ms (attempt ${restartAttempts}/${MAX_RESTART_ATTEMPTS})...`
+          );
+          setTimeout(async () => {
+            if (stopped) return;
+            try {
+              child = spawnProxy(config, port, logger);
+              setupCrashRecovery(child);
+              await waitForHealth(port);
+              logger.info(`maple-proxy restarted on http://127.0.0.1:${port}`);
+              restartAttempts = 0;
+            } catch (err) {
+              logger.error(
+                `Failed to restart maple-proxy: ${err instanceof Error ? err.message : err}`
+              );
+            }
+          }, delay);
+        } else {
+          logger.error(
+            `maple-proxy crashed ${MAX_RESTART_ATTEMPTS} times, giving up. ` +
+              `Restart the gateway to try again.`
+          );
+        }
+      }
+    });
+  };
+
+  setupCrashRecovery(child);
 
   await waitForHealth(port);
   logger.info(`maple-proxy running on http://127.0.0.1:${port}`);
@@ -96,9 +145,16 @@ export async function startProxy(
   return {
     process: child,
     port,
+    version,
     kill: () => {
+      stopped = true;
       if (!child.killed) {
-        child.kill("SIGTERM");
+        child.kill("SIGINT");
+        setTimeout(() => {
+          if (!child.killed) {
+            child.kill("SIGTERM");
+          }
+        }, 3000);
       }
     },
   };
