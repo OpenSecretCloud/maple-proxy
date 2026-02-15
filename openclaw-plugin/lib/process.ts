@@ -22,12 +22,18 @@ export interface RunningProxy {
 }
 
 function checkPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const server = net.createServer();
     server.listen(port, "127.0.0.1", () => {
       server.close(() => resolve(true));
     });
-    server.on("error", () => resolve(false));
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        resolve(false);
+      } else {
+        reject(err);
+      }
+    });
   });
 }
 
@@ -139,7 +145,33 @@ export async function startProxy(
 
   setupCrashRecovery(child);
 
-  await waitForHealth(port);
+  // Race health check against spawn errors so we fail fast if the binary
+  // is missing, not executable, or crashes immediately on startup.
+  try {
+    await Promise.race([
+      waitForHealth(port),
+      new Promise<never>((_, reject) => {
+        child.on("error", (err) => {
+          reject(new Error(`maple-proxy failed to spawn: ${err.message}`));
+        });
+        child.on("exit", (code, signal) => {
+          if (code !== null && code !== 0) {
+            reject(new Error(`maple-proxy exited immediately with code ${code}`));
+          } else if (signal) {
+            reject(new Error(`maple-proxy killed by signal ${signal} during startup`));
+          }
+        });
+      }),
+    ]);
+  } catch (err) {
+    // Clean up the child process if it's still around
+    if (!child.killed) {
+      child.kill("SIGKILL");
+    }
+    stopped = true;
+    throw err;
+  }
+
   logger.info(`maple-proxy running on http://127.0.0.1:${port}`);
 
   return {

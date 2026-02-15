@@ -17,6 +17,16 @@ const execFileAsync = promisify(execFile);
 const VERSION_CHECK_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_KEPT_VERSIONS = 2; // current + one previous
 
+function parseVer(v: string): number[] {
+  return v.replace(/^v/, "").split(".").map(Number);
+}
+
+export function compareVersionsDesc(a: string, b: string): number {
+  const [aMaj = 0, aMin = 0, aPat = 0] = parseVer(a);
+  const [bMaj = 0, bMin = 0, bPat = 0] = parseVer(b);
+  return bMaj - aMaj || bMin - aMin || bPat - aPat;
+}
+
 async function downloadFile(url: string, dest: string): Promise<void> {
   const res = await fetch(url, { redirect: "follow" });
   if (!res.ok) {
@@ -26,9 +36,16 @@ async function downloadFile(url: string, dest: string): Promise<void> {
   await fsp.writeFile(dest, buffer);
 }
 
-async function verifyChecksum(filePath: string, checksumUrl: string): Promise<void> {
+async function verifyChecksum(
+  filePath: string,
+  checksumUrl: string,
+  logger: { info: (msg: string) => void }
+): Promise<void> {
   const res = await fetch(checksumUrl, { redirect: "follow" });
   if (!res.ok) {
+    logger.info(
+      `Warning: checksum file not available (${res.status}), skipping verification for ${path.basename(filePath)}`
+    );
     return;
   }
 
@@ -55,8 +72,14 @@ async function extractTarGz(archivePath: string, destDir: string): Promise<void>
 async function extractZip(archivePath: string, destDir: string): Promise<void> {
   if (process.platform === "win32") {
     await execFileAsync("powershell", [
+      "-NoProfile",
       "-Command",
-      `Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force`,
+      "Expand-Archive",
+      "-Path",
+      archivePath,
+      "-DestinationPath",
+      destDir,
+      "-Force",
     ]);
   } else {
     await execFileAsync("unzip", ["-o", archivePath, "-d", destDir]);
@@ -110,11 +133,9 @@ async function cleanupOldVersions(
     return;
   }
 
-  // Filter to version directories (start with "v")
   const versionDirs = entries
     .filter((e) => e.startsWith("v"))
-    .sort()
-    .reverse();
+    .sort(compareVersionsDesc);
 
   if (versionDirs.length <= MAX_KEPT_VERSIONS) {
     return;
@@ -170,7 +191,7 @@ export async function ensureBinary(
   await downloadFile(releaseUrl, archivePath);
 
   const checksumUrl = getChecksumUrl(version, artifact);
-  await verifyChecksum(archivePath, checksumUrl);
+  await verifyChecksum(archivePath, checksumUrl, logger);
 
   logger.info(`Extracting to ${versionDir}...`);
   if (artifact.archiveType === "zip") {

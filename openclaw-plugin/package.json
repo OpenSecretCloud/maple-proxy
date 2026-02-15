@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "tsc --noEmit",
-    "test": "echo \"no tests yet\"",
+    "test": "tsc && node --test dist/lib/downloader.test.js",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

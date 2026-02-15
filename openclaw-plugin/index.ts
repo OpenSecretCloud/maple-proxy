@@ -96,6 +96,12 @@ export default function register(api: PluginApi) {
     id: "maple-proxy-service",
 
     async start() {
+      if (proxy) {
+        api.logger.info("Stopping existing maple-proxy before restart...");
+        proxy.kill();
+        proxy = null;
+      }
+
       const pluginConfig =
         api.config.plugins.entries[PLUGIN_CONFIG_KEY]?.config;
 
