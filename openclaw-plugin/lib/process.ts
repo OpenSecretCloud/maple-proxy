@@ -110,8 +110,16 @@ export async function startProxy(
       if (stopped) return;
       if (signal === "SIGINT" || signal === "SIGTERM") return;
 
-      if (code !== null && code !== 0) {
-        logger.error(`maple-proxy crashed with code ${code}`);
+      const crashed =
+        (code !== null && code !== 0) ||
+        (code === null && signal !== null);
+
+      if (crashed) {
+        const reason =
+          code !== null
+            ? `exit code ${code}`
+            : `signal ${signal}`;
+        logger.error(`maple-proxy crashed (${reason})`);
 
         if (restartAttempts < MAX_RESTART_ATTEMPTS) {
           restartAttempts++;
@@ -174,20 +182,24 @@ export async function startProxy(
 
   logger.info(`maple-proxy running on http://127.0.0.1:${port}`);
 
+  let exited = false;
+  child.on("exit", () => {
+    exited = true;
+  });
+
   return {
     process: child,
     port,
     version,
     kill: () => {
       stopped = true;
-      if (!child.killed) {
-        child.kill("SIGINT");
-        setTimeout(() => {
-          if (!child.killed) {
-            child.kill("SIGTERM");
-          }
-        }, 3000);
-      }
+      if (exited) return;
+      child.kill("SIGINT");
+      setTimeout(() => {
+        if (!exited) {
+          child.kill("SIGTERM");
+        }
+      }, 3000);
     },
   };
 }

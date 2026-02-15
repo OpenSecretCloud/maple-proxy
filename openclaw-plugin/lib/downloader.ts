@@ -43,10 +43,16 @@ async function verifyChecksum(
 ): Promise<void> {
   const res = await fetch(checksumUrl, { redirect: "follow" });
   if (!res.ok) {
-    logger.info(
-      `Warning: checksum file not available (${res.status}), skipping verification for ${path.basename(filePath)}`
+    if (res.status === 404) {
+      logger.info(
+        `Warning: checksum file not found (404), skipping verification for ${path.basename(filePath)}`
+      );
+      return;
+    }
+    throw new Error(
+      `Failed to fetch checksum for ${path.basename(filePath)}: ${res.status} ${res.statusText}. ` +
+        `This may indicate GitHub rate limiting or a server error.`
     );
-    return;
   }
 
   const expectedLine = (await res.text()).trim();
