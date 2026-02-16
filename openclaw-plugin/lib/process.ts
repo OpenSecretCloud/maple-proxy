@@ -149,6 +149,9 @@ export async function startProxy(
               logger.error(
                 `Failed to restart maple-proxy: ${err instanceof Error ? err.message : err}`
               );
+              if (!child.killed) {
+                child.kill("SIGKILL");
+              }
             }
           }, delay);
         } else {
