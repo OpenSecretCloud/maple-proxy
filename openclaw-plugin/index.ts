@@ -38,6 +38,7 @@ const PLUGIN_CONFIG_KEY = "maple-openclaw-plugin";
 
 export default function register(api: PluginApi) {
   let proxy: RunningProxy | null = null;
+  let starting = false;
 
   api.registerTool({
     name: "maple_proxy_status",
@@ -96,24 +97,30 @@ export default function register(api: PluginApi) {
     id: "maple-proxy-service",
 
     async start() {
-      if (proxy) {
-        api.logger.info("Stopping existing maple-proxy before restart...");
-        proxy.kill();
-        proxy = null;
-      }
-
-      const pluginConfig =
-        api.config.plugins.entries[PLUGIN_CONFIG_KEY]?.config;
-
-      if (!pluginConfig?.apiKey) {
-        api.logger.error(
-          `${PLUGIN_CONFIG_KEY}: no apiKey configured. ` +
-            `Set plugins.entries["${PLUGIN_CONFIG_KEY}"].config.apiKey in openclaw.json`
-        );
+      if (starting) {
+        api.logger.info("maple-proxy start already in progress, skipping");
         return;
       }
+      starting = true;
 
       try {
+        if (proxy) {
+          api.logger.info("Stopping existing maple-proxy before restart...");
+          proxy.kill();
+          proxy = null;
+        }
+
+        const pluginConfig =
+          api.config.plugins.entries[PLUGIN_CONFIG_KEY]?.config;
+
+        if (!pluginConfig?.apiKey) {
+          api.logger.error(
+            `${PLUGIN_CONFIG_KEY}: no apiKey configured. ` +
+              `Set plugins.entries["${PLUGIN_CONFIG_KEY}"].config.apiKey in openclaw.json`
+          );
+          return;
+        }
+
         const { binaryPath, version } = await ensureBinary(
           api.logger,
           pluginConfig.version
@@ -140,6 +147,8 @@ export default function register(api: PluginApi) {
         api.logger.error(
           `${PLUGIN_CONFIG_KEY}: failed to start: ${err instanceof Error ? err.message : err}`
         );
+      } finally {
+        starting = false;
       }
     },
 
