@@ -15,7 +15,7 @@ export interface ProxyConfig {
 }
 
 export interface RunningProxy {
-  process: ChildProcess;
+  readonly process: ChildProcess;
   port: number;
   version: string;
   kill: () => void;
@@ -193,7 +193,9 @@ export async function startProxy(
   logger.info(`maple-proxy running on http://127.0.0.1:${port}`);
 
   return {
-    process: child,
+    get process() {
+      return child;
+    },
     port,
     version,
     kill: () => {
@@ -202,7 +204,7 @@ export async function startProxy(
       child.kill("SIGINT");
       setTimeout(() => {
         if (!exited) {
-          child.kill("SIGTERM");
+          child.kill("SIGKILL");
         }
       }, 3000);
     },
