@@ -40,10 +40,40 @@ Or configure explicitly under `models.providers`:
 
 Use the `maple_proxy_status` tool to check if the proxy is running, which port it is on, and its health status.
 
+## Embeddings & Memory Search
+
+maple-proxy serves an OpenAI-compatible embeddings endpoint using the `nomic-embed-text` model. You can use this for OpenClaw's memory search so that embeddings are generated inside the TEE -- no cloud embedding provider needed.
+
+To configure memory search with maple-proxy embeddings, add this to your `openclaw.json`:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "memorySearch": {
+        "provider": "openai",
+        "model": "nomic-embed-text",
+        "remote": {
+          "baseUrl": "http://127.0.0.1:8000/v1/",
+          "apiKey": "maple-local"
+        }
+      }
+    }
+  }
+}
+```
+
+Notes:
+- The `apiKey` value can be anything (e.g., `"maple-local"`) since maple-proxy uses the plugin-configured API key for backend auth
+- If you changed the plugin port, update the `baseUrl` accordingly
+- This replaces the need for a separate OpenAI, Gemini, or Voyage API key for embeddings
+- Compatible with OpenClaw's hybrid search (BM25 + vector), session memory indexing, and embedding cache
+
 ## Direct API Access
 
 - `GET http://127.0.0.1:8000/v1/models` - List available models
 - `POST http://127.0.0.1:8000/v1/chat/completions` - Chat completions (streaming and non-streaming)
+- `POST http://127.0.0.1:8000/v1/embeddings` - Generate embeddings (model: `nomic-embed-text`)
 - `GET http://127.0.0.1:8000/health` - Health check
 
 ## Port Override
