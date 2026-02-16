@@ -2,6 +2,7 @@
   "name": "@opensecret/maple-openclaw-plugin",
   "version": "0.1.0",
   "description": "OpenClaw plugin that runs Maple TEE-backed AI models via maple-proxy",
+  "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -9,20 +10,26 @@
     "directory": "openclaw-plugin"
   },
   "openclaw": {
-    "extensions": ["./dist/index.js"]
+    "extensions": ["./index.ts"]
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "files": [
-    "dist",
+    "index.ts",
+    "lib",
     "skills",
     "openclaw.plugin.json"
   ],
   "scripts": {
     "build": "tsc",
     "lint": "tsc --noEmit",
-    "test": "tsc && node --test dist/lib/downloader.test.js",
-    "prepublishOnly": "npm run build"
+    "test": "tsc && node --test dist/lib/downloader.test.js"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.1.0"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7.0",
