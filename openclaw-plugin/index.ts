@@ -141,7 +141,7 @@ export default function register(api: PluginApi) {
 
         api.logger.info(
           `maple-proxy is OpenAI-compatible at http://127.0.0.1:${proxy.port}/v1 ` +
-            `-- configure as vLLM provider or use directly`
+            `-- configure as maple provider or use directly`
         );
       } catch (err) {
         api.logger.error(
