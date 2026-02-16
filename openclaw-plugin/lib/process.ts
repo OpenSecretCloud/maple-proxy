@@ -103,7 +103,15 @@ export async function startProxy(
 
   let child = spawnProxy(config, port, logger);
   let stopped = false;
+  let exited = false;
   let restartAttempts = 0;
+
+  const trackExit = (proc: ChildProcess) => {
+    proc.on("exit", () => {
+      exited = true;
+    });
+  };
+  trackExit(child);
 
   const setupCrashRecovery = (proc: ChildProcess) => {
     proc.on("exit", (code, signal) => {
@@ -131,6 +139,8 @@ export async function startProxy(
             if (stopped) return;
             try {
               child = spawnProxy(config, port, logger);
+              exited = false;
+              trackExit(child);
               setupCrashRecovery(child);
               await waitForHealth(port);
               logger.info(`maple-proxy restarted on http://127.0.0.1:${port}`);
@@ -181,11 +191,6 @@ export async function startProxy(
   }
 
   logger.info(`maple-proxy running on http://127.0.0.1:${port}`);
-
-  let exited = false;
-  child.on("exit", () => {
-    exited = true;
-  });
 
   return {
     process: child,
