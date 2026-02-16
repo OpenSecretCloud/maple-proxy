@@ -50,6 +50,29 @@ export default function register(api: PluginApi) {
       properties: {},
     },
     async execute() {
+      const pluginConfig =
+        api.config.plugins.entries[PLUGIN_CONFIG_KEY]?.config;
+
+      if (!pluginConfig?.apiKey) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                running: false,
+                error: "maple-proxy is not configured",
+                setup: {
+                  step1: 'Set your Maple API key: plugins.entries["maple-openclaw-plugin"].config.apiKey',
+                  step2: "Add a maple provider to models.providers with baseUrl http://127.0.0.1:8787/v1 and your Maple API key",
+                  step3: "If you have agents.defaults.models, add the maple models (e.g. maple/kimi-k2-5)",
+                  step4: "Restart the gateway",
+                },
+              }),
+            },
+          ],
+        };
+      }
+
       if (!proxy) {
         return {
           content: [
@@ -57,7 +80,7 @@ export default function register(api: PluginApi) {
               type: "text",
               text: JSON.stringify({
                 running: false,
-                error: "maple-proxy is not running",
+                error: "maple-proxy is not running. The API key is configured but the service failed to start. Check gateway logs for details.",
               }),
             },
           ],
