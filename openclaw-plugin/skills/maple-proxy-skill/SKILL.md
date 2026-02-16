@@ -55,7 +55,7 @@ To configure memory search with maple-proxy embeddings, add this to your `opencl
         "model": "nomic-embed-text",
         "remote": {
           "baseUrl": "http://127.0.0.1:8000/v1/",
-          "apiKey": "maple-local"
+          "apiKey": "YOUR_MAPLE_API_KEY"
         }
       }
     }
@@ -64,7 +64,7 @@ To configure memory search with maple-proxy embeddings, add this to your `opencl
 ```
 
 Notes:
-- The `apiKey` value can be anything (e.g., `"maple-local"`) since maple-proxy uses the plugin-configured API key for backend auth
+- Use the same Maple API key you configured in the plugin config -- maple-proxy forwards the `Authorization: Bearer` header to the TEE backend for authentication
 - If you changed the plugin port, update the `baseUrl` accordingly
 - This replaces the need for a separate OpenAI, Gemini, or Voyage API key for embeddings
 - Compatible with OpenClaw's hybrid search (BM25 + vector), session memory indexing, and embedding cache
