@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import net from "node:net";
 
-const DEFAULT_PORT = 8000;
+const DEFAULT_PORT = 8787;
 const HEALTH_TIMEOUT_MS = 10000;
 const MAX_RESTART_ATTEMPTS = 3;
 const RESTART_BACKOFF_MS = 2000;

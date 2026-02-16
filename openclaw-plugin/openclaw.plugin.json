@@ -17,7 +17,7 @@
   },
   "uiHints": {
     "apiKey": { "label": "Maple API Key", "sensitive": true },
-    "port": { "label": "Local Port", "placeholder": "8000" },
+    "port": { "label": "Local Port", "placeholder": "8787" },
     "backendUrl": { "label": "Backend URL", "placeholder": "https://enclave.trymaple.ai" },
     "debug": { "label": "Debug Logging" },
     "version": { "label": "Binary Version", "placeholder": "latest" }
