@@ -116,7 +116,7 @@ export async function startProxy(
   const setupCrashRecovery = (proc: ChildProcess) => {
     proc.on("exit", (code, signal) => {
       if (stopped) return;
-      if (signal === "SIGINT" || signal === "SIGTERM") return;
+      if (signal === "SIGINT" || signal === "SIGTERM" || signal === "SIGKILL") return;
 
       const crashed =
         (code !== null && code !== 0) ||
