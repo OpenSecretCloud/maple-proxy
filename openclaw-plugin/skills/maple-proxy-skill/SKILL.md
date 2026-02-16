@@ -123,3 +123,7 @@ The default port is 8787. To change it:
 ```
 
 If you change the port, update your `models.providers.maple.baseUrl` and `memorySearch.remote.baseUrl` to match.
+
+## Configuration Changes
+
+Plugin config changes (port, API key, backend URL) require a full gateway restart to take effect. Model and provider config changes hot-apply without a restart.
