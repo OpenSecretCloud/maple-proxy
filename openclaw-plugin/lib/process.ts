@@ -153,7 +153,7 @@ export async function startProxy(
                 child.kill("SIGKILL");
               }
             }
-          }, delay);
+          }, delay).unref();
         } else {
           logger.error(
             `maple-proxy crashed ${MAX_RESTART_ATTEMPTS} times, giving up. ` +
@@ -209,7 +209,7 @@ export async function startProxy(
         if (!exited) {
           child.kill("SIGKILL");
         }
-      }, 3000);
+      }, 3000).unref();
     },
   };
 }
