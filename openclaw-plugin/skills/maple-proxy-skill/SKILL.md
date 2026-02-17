@@ -78,13 +78,37 @@ Use the `maple_proxy_status` tool to check if the proxy is running, which port i
 
 ## Embeddings & Memory Search
 
-maple-proxy serves an OpenAI-compatible embeddings endpoint using the `nomic-embed-text` model. You can use this for OpenClaw's memory search so that embeddings are generated inside the TEE -- no cloud embedding provider needed.
+maple-proxy serves an OpenAI-compatible embeddings endpoint using the `nomic-embed-text` model. You can use this for OpenClaw's memory search so that embeddings are generated inside the TEE — no cloud embedding provider needed.
+
+### 1. Enable the memory-core plugin
+
+The `memory_search` and `memory_get` tools are provided by OpenClaw's `memory-core` plugin. It ships as a stock plugin but must be explicitly enabled. Add it to `plugins.allow` and `plugins.entries`:
+
+```json
+{
+  "plugins": {
+    "allow": ["memory-core"],
+    "entries": {
+      "memory-core": {
+        "enabled": true
+      }
+    }
+  }
+}
+```
+
+This requires a **full gateway restart** (not just SIGUSR1) since it's a plugin change.
+
+### 2. Configure memorySearch to use maple-proxy
+
+Point `memorySearch.remote` at the local maple-proxy endpoint. **Important**: the `model` field must be `nomic-embed-text` (without a `maple/` provider prefix) — the proxy does not strip provider prefixes for embedding requests.
 
 ```json
 {
   "agents": {
     "defaults": {
       "memorySearch": {
+        "enabled": true,
         "provider": "openai",
         "model": "nomic-embed-text",
         "remote": {
@@ -97,7 +121,48 @@ maple-proxy serves an OpenAI-compatible embeddings endpoint using the `nomic-emb
 }
 ```
 
-Use the same Maple API key here. This replaces the need for a separate OpenAI, Gemini, or Voyage API key for embeddings. Compatible with OpenClaw's hybrid search (BM25 + vector), session memory indexing, and embedding cache.
+Use the same Maple API key you configured in the plugin config. This replaces the need for a separate OpenAI, Gemini, or Voyage API key for embeddings.
+
+> **Common mistake**: Setting the model to `maple/nomic-embed-text` will cause 400 errors from the proxy. Use `nomic-embed-text` (no prefix).
+
+### 3. Restart and reindex
+
+After updating the config, do a full gateway restart, then build the vector index:
+
+```bash
+# Full restart (plugin changes require this)
+systemctl restart openclaw.service
+
+# Index memory files and generate embeddings
+openclaw memory index --verbose
+
+# Verify everything is working
+openclaw memory status --deep
+```
+
+The status output should show:
+- **Provider**: `openai` (this is the API format, not the actual provider)
+- **Model**: `nomic-embed-text`
+- **Embeddings**: `available` (not `unavailable`)
+- **Vector**: `ready`
+
+### 4. Test with the CLI and tool
+
+Test from the command line first:
+
+```bash
+openclaw memory search "your query here"
+```
+
+Once that works, the `memory_search` tool will also be available to the agent in chat. The agent can call `memory_search` to semantically search across `MEMORY.md` and `memory/*.md` files, with results ranked by relevance and cited with source paths.
+
+### Troubleshooting
+
+- **"memory slot plugin not found"** in logs → `memory-core` is not in `plugins.allow` or `plugins.entries`, or hasn't been restarted after adding it
+- **Embeddings 400 error** → model name includes provider prefix (`maple/nomic-embed-text`), change to `nomic-embed-text`
+- **Embeddings 401 error** → wrong API key, or key is a literal string like `${MAPLE_API_KEY}` instead of the actual key value
+- **"Batch: disabled"** in status → embeddings failed too many times, fix the config and restart to reset the failure counter
+- **Only 1/7 files indexed** → embeddings were failing, fix config, restart, then run `openclaw memory index --verbose`
 
 ## Direct API Access
 
