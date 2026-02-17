@@ -137,11 +137,12 @@ export async function startProxy(
           );
           setTimeout(async () => {
             if (stopped) return;
+            const spawned = spawnProxy(config, port, logger);
+            child = spawned;
+            exited = false;
+            trackExit(spawned);
+            setupCrashRecovery(spawned);
             try {
-              child = spawnProxy(config, port, logger);
-              exited = false;
-              trackExit(child);
-              setupCrashRecovery(child);
               await waitForHealth(port);
               logger.info(`maple-proxy restarted on http://127.0.0.1:${port}`);
               restartAttempts = 0;
@@ -149,8 +150,8 @@ export async function startProxy(
               logger.error(
                 `Failed to restart maple-proxy: ${err instanceof Error ? err.message : err}`
               );
-              if (!child.killed) {
-                child.kill("SIGKILL");
+              if (!spawned.killed) {
+                spawned.kill("SIGKILL");
               }
             }
           }, delay).unref();
