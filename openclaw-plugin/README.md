@@ -185,8 +185,6 @@ The status output should show **Embeddings: available** and **Vector: ready**.
 openclaw plugins update maple-openclaw-plugin
 ```
 
-> **Note**: `openclaw plugins update` works for stable releases. To move between beta versions, reinstall with the full version: `openclaw plugins install @opensecret/maple-openclaw-plugin@0.1.0-beta.4`
-
 ## Direct API Access
 
 - `GET http://127.0.0.1:8787/v1/models` -- List available models
