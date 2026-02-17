@@ -24,7 +24,10 @@ Add a `maple` provider to your `openclaw.json` with your Maple API key and the m
         "api": "openai-completions",
         "models": [
           { "id": "kimi-k2-5", "name": "Kimi K2.5 (recommended)" },
-          { "id": "llama-3.3-70b", "name": "Llama 3.3 70B" }
+          { "id": "deepseek-r1-0528", "name": "DeepSeek R1" },
+          { "id": "gpt-oss-120b", "name": "GPT-OSS 120B" },
+          { "id": "llama-3.3-70b", "name": "Llama 3.3 70B" },
+          { "id": "qwen3-vl-30b", "name": "Qwen3 VL 30B" }
         ]
       }
     }
@@ -48,7 +51,10 @@ Add each model you want to use as `maple/<model-id>`. Check available models via
     "defaults": {
       "models": {
         "maple/kimi-k2-5": {},
-        "maple/llama-3.3-70b": {}
+        "maple/deepseek-r1-0528": {},
+        "maple/gpt-oss-120b": {},
+        "maple/llama-3.3-70b": {},
+        "maple/qwen3-vl-30b": {}
       }
     }
   }
@@ -64,7 +70,10 @@ Restart the OpenClaw gateway to pick up the new provider and model config.
 Use maple models by prefixing with `maple/`:
 
 - `maple/kimi-k2-5` (recommended)
+- `maple/deepseek-r1-0528`
+- `maple/gpt-oss-120b`
 - `maple/llama-3.3-70b`
+- `maple/qwen3-vl-30b`
 
 To spawn a subagent on a Maple model:
 

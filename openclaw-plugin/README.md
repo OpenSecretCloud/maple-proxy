@@ -53,7 +53,10 @@ Add a `maple` provider so OpenClaw can route requests to the local proxy (defaul
         "api": "openai-completions",
         "models": [
           { "id": "kimi-k2-5", "name": "Kimi K2.5 (recommended)" },
-          { "id": "llama-3.3-70b", "name": "Llama 3.3 70B" }
+          { "id": "deepseek-r1-0528", "name": "DeepSeek R1" },
+          { "id": "gpt-oss-120b", "name": "GPT-OSS 120B" },
+          { "id": "llama-3.3-70b", "name": "Llama 3.3 70B" },
+          { "id": "qwen3-vl-30b", "name": "Qwen3 VL 30B" }
         ]
       }
     }
@@ -73,7 +76,10 @@ If you have an `agents.defaults.models` section in your config, add the maple mo
     "defaults": {
       "models": {
         "maple/kimi-k2-5": {},
-        "maple/llama-3.3-70b": {}
+        "maple/deepseek-r1-0528": {},
+        "maple/gpt-oss-120b": {},
+        "maple/llama-3.3-70b": {},
+        "maple/qwen3-vl-30b": {}
       }
     }
   }
@@ -93,7 +99,10 @@ Plugin config changes always require a full gateway restart. Model and provider 
 Use maple models by prefixing with `maple/`:
 
 - `maple/kimi-k2-5` (recommended)
+- `maple/deepseek-r1-0528`
+- `maple/gpt-oss-120b`
 - `maple/llama-3.3-70b`
+- `maple/qwen3-vl-30b`
 
 The plugin also registers a `maple_proxy_status` tool that shows the proxy's health, port, version, and available endpoints. If the plugin isn't configured yet, the tool returns setup instructions.
 
