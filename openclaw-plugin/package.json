@@ -1,6 +1,6 @@
 {
   "name": "@opensecret/maple-openclaw-plugin",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "OpenClaw plugin that runs Maple TEE-backed AI models via maple-proxy",
   "type": "module",
   "license": "MIT",
