@@ -2,13 +2,23 @@
 
 OpenClaw plugin that automatically downloads, configures, and runs [maple-proxy](https://github.com/OpenSecretCloud/maple-proxy) as a background service. All AI inference runs inside Maple's TEE (Trusted Execution Environment) secure enclaves.
 
-## Install
+## Quick Start (Recommended)
+
+Install the plugin and let your agent handle the rest:
 
 ```bash
 openclaw plugins install @opensecret/maple-openclaw-plugin
 ```
 
-## Setup
+Then tell your agent:
+
+> Install and configure maple-proxy with my API key: `YOUR_MAPLE_API_KEY`
+
+The plugin bundles a skill that teaches the agent how to set up the maple provider, configure models, and enable embeddings. After a gateway restart, the agent will have all the context it needs from the skill to complete the setup. If the plugin isn't configured yet, the `maple_proxy_status` tool also returns step-by-step instructions.
+
+## Manual Setup
+
+If you prefer to configure everything yourself, follow these steps after installing the plugin.
 
 ### 1. Configure the plugin
 
