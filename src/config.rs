@@ -33,6 +33,21 @@ pub struct Config {
     /// Enable CORS for all origins (useful for web clients)
     #[arg(long, env = "MAPLE_ENABLE_CORS")]
     pub enable_cors: bool,
+
+    #[cfg(feature = "l402")]
+    /// Root key for L402 macaroon signing (64-char hex / 32 bytes)
+    #[arg(long, env = "TOLLBOOTH_ROOT_KEY")]
+    pub root_key: Option<String>,
+
+    #[cfg(feature = "l402")]
+    /// Price in satoshis per API request
+    #[arg(long, env = "TOLLBOOTH_PRICE_SATS", default_value = "100")]
+    pub price_sats: u64,
+
+    #[cfg(feature = "l402")]
+    /// Number of free requests per day per IP (0 to disable)
+    #[arg(long, env = "TOLLBOOTH_FREE_REQUESTS", default_value = "0")]
+    pub free_requests: u64,
 }
 
 impl Config {
@@ -58,6 +73,12 @@ impl Config {
             default_api_key: None,
             debug: false,
             enable_cors: false,
+            #[cfg(feature = "l402")]
+            root_key: None,
+            #[cfg(feature = "l402")]
+            price_sats: 100,
+            #[cfg(feature = "l402")]
+            free_requests: 0,
         }
     }
 
@@ -77,6 +98,12 @@ impl Config {
     pub fn with_cors(mut self, enable_cors: bool) -> Self {
         self.enable_cors = enable_cors;
         self
+    }
+
+    #[cfg(feature = "l402")]
+    /// Returns true if L402 payment gating is enabled (requires TOLLBOOTH_ROOT_KEY to be set)
+    pub fn l402_enabled(&self) -> bool {
+        self.root_key.is_some()
     }
 }
 

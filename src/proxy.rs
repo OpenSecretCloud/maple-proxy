@@ -45,6 +45,17 @@ fn extract_api_key(
         if let Some(key) = auth_str.strip_prefix("Bearer ") {
             return Ok(key.to_string());
         }
+
+        // L402-authenticated requests use the default API key
+        // (toll-booth middleware already verified payment)
+        if auth_str.starts_with("L402 ") || auth_str.starts_with("l402 ") {
+            return default_key
+                .as_ref()
+                .cloned()
+                .ok_or_else(|| OpenAIError::authentication_error(
+                    "L402 payment accepted but no MAPLE_API_KEY configured on server"
+                ));
+        }
     }
 
     // Fall back to default API key from config

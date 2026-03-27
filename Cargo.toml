@@ -10,6 +10,10 @@ homepage = "https://github.com/OpenSecret/maple-proxy"
 keywords = ["openai", "proxy", "tee", "opensecret", "maple"]
 categories = ["web-programming::http-server", "api-bindings"]
 
+[features]
+default = []
+l402 = ["dep:toll-booth"]
+
 [lib]
 name = "maple_proxy"
 path = "src/lib.rs"
@@ -19,8 +23,11 @@ name = "maple-proxy"
 path = "src/main.rs"
 
 [dependencies]
-# OpenSecret SDK 
+# OpenSecret SDK
 opensecret = "0.2.9"
+
+# Optional: L402 Lightning payment gating
+toll-booth = { git = "https://github.com/forgesworn/toll-booth-rs", optional = true, default-features = false, features = ["l402", "axum-middleware"] }
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
