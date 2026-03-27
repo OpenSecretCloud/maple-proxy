@@ -48,6 +48,7 @@ fn extract_api_key(
 
         // L402-authenticated requests use the default API key
         // (toll-booth middleware already verified payment)
+        #[cfg(feature = "l402")]
         if auth_str.starts_with("L402 ") || auth_str.starts_with("l402 ") {
             return default_key
                 .as_ref()
