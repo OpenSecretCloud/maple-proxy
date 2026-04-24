@@ -91,7 +91,7 @@ Run tests with `just test` or `cargo test`.
 ## Dependencies
 
 Key dependencies:
-- **opensecret** (0.2.0) - Official OpenSecret SDK for TEE communication
+- **opensecret** - Official OpenSecret SDK for TEE communication
 - **axum** - Web framework for the HTTP server
 - **tokio** - Async runtime
 - **tower/tower-http** - Middleware for CORS and tracing
