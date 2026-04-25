@@ -20,7 +20,7 @@ path = "src/main.rs"
 
 [dependencies]
 # OpenSecret SDK 
-opensecret = "3.0.4"
+opensecret = "3.1.1"
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
