@@ -56,6 +56,8 @@ ENV MAPLE_HOST=0.0.0.0 \
     MAPLE_BACKEND_URL=https://enclave.trymaple.ai \
     MAPLE_DEBUG=false \
     MAPLE_ENABLE_CORS=true \
+    MAPLE_REQUEST_TIMEOUT_SECS=300 \
+    MAPLE_STREAM_IDLE_TIMEOUT_SECS=300 \
     RUST_LOG=info
 
 # Expose the port

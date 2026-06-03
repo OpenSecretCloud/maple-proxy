@@ -13,6 +13,8 @@ async fn test_health_check_endpoint() {
         default_api_key: None,
         debug: false,
         enable_cors: false,
+        request_timeout_secs: 300,
+        stream_idle_timeout_secs: 300,
     };
 
     // Create test server
@@ -38,6 +40,8 @@ async fn test_root_health_check() {
         default_api_key: None,
         debug: false,
         enable_cors: false,
+        request_timeout_secs: 300,
+        stream_idle_timeout_secs: 300,
     };
 
     let app = create_app(config);

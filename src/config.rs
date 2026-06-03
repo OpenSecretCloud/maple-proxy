@@ -1,6 +1,9 @@
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
+
+pub const DEFAULT_REQUEST_TIMEOUT_SECS: u64 = 300;
+pub const DEFAULT_STREAM_IDLE_TIMEOUT_SECS: u64 = 300;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "maple-proxy")]
@@ -33,6 +36,22 @@ pub struct Config {
     /// Enable CORS for all origins (useful for web clients)
     #[arg(long, env = "MAPLE_ENABLE_CORS")]
     pub enable_cors: bool,
+
+    /// Timeout for backend request setup and non-streaming responses, in seconds
+    #[arg(
+        long,
+        env = "MAPLE_REQUEST_TIMEOUT_SECS",
+        default_value_t = DEFAULT_REQUEST_TIMEOUT_SECS
+    )]
+    pub request_timeout_secs: u64,
+
+    /// Maximum time to wait between streaming response chunks, in seconds
+    #[arg(
+        long,
+        env = "MAPLE_STREAM_IDLE_TIMEOUT_SECS",
+        default_value_t = DEFAULT_STREAM_IDLE_TIMEOUT_SECS
+    )]
+    pub stream_idle_timeout_secs: u64,
 }
 
 impl Config {
@@ -58,7 +77,17 @@ impl Config {
             default_api_key: None,
             debug: false,
             enable_cors: false,
+            request_timeout_secs: DEFAULT_REQUEST_TIMEOUT_SECS,
+            stream_idle_timeout_secs: DEFAULT_STREAM_IDLE_TIMEOUT_SECS,
         }
+    }
+
+    pub fn request_timeout(&self) -> Duration {
+        Duration::from_secs(self.request_timeout_secs)
+    }
+
+    pub fn stream_idle_timeout(&self) -> Duration {
+        Duration::from_secs(self.stream_idle_timeout_secs)
     }
 
     /// Builder-style method to set the API key
@@ -76,6 +105,18 @@ impl Config {
     /// Builder-style method to enable CORS
     pub fn with_cors(mut self, enable_cors: bool) -> Self {
         self.enable_cors = enable_cors;
+        self
+    }
+
+    /// Builder-style method to set the backend request timeout
+    pub fn with_request_timeout_secs(mut self, request_timeout_secs: u64) -> Self {
+        self.request_timeout_secs = request_timeout_secs;
+        self
+    }
+
+    /// Builder-style method to set the streaming idle timeout
+    pub fn with_stream_idle_timeout_secs(mut self, stream_idle_timeout_secs: u64) -> Self {
+        self.stream_idle_timeout_secs = stream_idle_timeout_secs;
         self
     }
 }
@@ -112,5 +153,47 @@ impl OpenAIError {
 
     pub fn server_error(message: impl Into<String>) -> Self {
         Self::new(message, "server_error")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_new_uses_timeout_defaults() {
+        let config = Config::new(
+            "127.0.0.1".to_string(),
+            8080,
+            "https://enclave.trymaple.ai".to_string(),
+        );
+
+        assert_eq!(config.request_timeout_secs, DEFAULT_REQUEST_TIMEOUT_SECS);
+        assert_eq!(
+            config.stream_idle_timeout_secs,
+            DEFAULT_STREAM_IDLE_TIMEOUT_SECS
+        );
+        assert_eq!(
+            config.request_timeout(),
+            Duration::from_secs(DEFAULT_REQUEST_TIMEOUT_SECS)
+        );
+        assert_eq!(
+            config.stream_idle_timeout(),
+            Duration::from_secs(DEFAULT_STREAM_IDLE_TIMEOUT_SECS)
+        );
+    }
+
+    #[test]
+    fn timeout_builder_methods_override_defaults() {
+        let config = Config::new(
+            "127.0.0.1".to_string(),
+            8080,
+            "https://enclave.trymaple.ai".to_string(),
+        )
+        .with_request_timeout_secs(45)
+        .with_stream_idle_timeout_secs(15);
+
+        assert_eq!(config.request_timeout(), Duration::from_secs(45));
+        assert_eq!(config.stream_idle_timeout(), Duration::from_secs(15));
     }
 }

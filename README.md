@@ -45,6 +45,8 @@ export MAPLE_BACKEND_URL=http://localhost:3000         # Maple backend URL (prod
 export MAPLE_API_KEY=your-maple-api-key        # Default API key (optional)
 export MAPLE_DEBUG=true                        # Enable debug logging
 export MAPLE_ENABLE_CORS=true                  # Enable CORS
+export MAPLE_REQUEST_TIMEOUT_SECS=300          # Backend request timeout
+export MAPLE_STREAM_IDLE_TIMEOUT_SECS=300      # Streaming idle timeout between chunks
 ```
 
 Or use CLI arguments:

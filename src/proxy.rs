@@ -81,6 +81,7 @@ impl ProxyState {
         let cache_key = api_key.to_string();
         let client_entry = self.client_entry_for_api_key(&cache_key);
         let backend_url = self.config.backend_url.clone();
+        let request_timeout = self.config.request_timeout();
         let init_api_key = cache_key.clone();
 
         let client = client_entry
@@ -90,7 +91,7 @@ impl ProxyState {
                     "Creating OpenSecret client for API key: {}...",
                     &init_api_key[..8.min(init_api_key.len())]
                 );
-                create_client_with_auth(&backend_url, &init_api_key)
+                create_client_with_auth(&backend_url, &init_api_key, request_timeout)
                     .await
                     .map(Arc::new)
             })
@@ -164,17 +165,46 @@ fn extract_api_key(
 async fn create_client_with_auth(
     backend_url: &str,
     api_key: &str,
+    request_timeout: Duration,
 ) -> Result<OpenSecretClient, OpenAIError> {
     let client = OpenSecretClient::new_with_api_key(backend_url, api_key.to_string())
         .map_err(|e| OpenAIError::server_error(format!("Failed to create client: {}", e)))?;
 
     // Perform attestation handshake
-    client.perform_attestation_handshake().await.map_err(|e| {
-        error!("Attestation handshake failed: {}", e);
-        OpenAIError::server_error("Failed to establish secure connection with Maple backend")
-    })?;
+    tokio::time::timeout(request_timeout, client.perform_attestation_handshake())
+        .await
+        .map_err(|_| {
+            error!(
+                "Attestation handshake timed out after {} seconds",
+                request_timeout.as_secs()
+            );
+            OpenAIError::server_error(format!(
+                "Timed out establishing secure connection with Maple backend after {} seconds",
+                request_timeout.as_secs()
+            ))
+        })?
+        .map_err(|e| {
+            error!("Attestation handshake failed: {}", e);
+            OpenAIError::server_error("Failed to establish secure connection with Maple backend")
+        })?;
 
     Ok(client)
+}
+
+fn timeout_response(operation: &str, timeout: Duration) -> (StatusCode, Json<OpenAIError>) {
+    error!(
+        "{} timed out after {} seconds",
+        operation,
+        timeout.as_secs()
+    );
+    (
+        StatusCode::GATEWAY_TIMEOUT,
+        Json(OpenAIError::server_error(format!(
+            "{} timed out after {} seconds",
+            operation,
+            timeout.as_secs()
+        ))),
+    )
 }
 
 pub async fn list_models(
@@ -194,16 +224,20 @@ pub async fn list_models(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
 
-    let models = client.get_models().await.map_err(|e| {
-        error!("Failed to get models: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(OpenAIError::server_error(format!(
-                "Failed to retrieve models: {}",
-                e
-            ))),
-        )
-    })?;
+    let request_timeout = state.config.request_timeout();
+    let models = tokio::time::timeout(request_timeout, client.get_models())
+        .await
+        .map_err(|_| timeout_response("List models request", request_timeout))?
+        .map_err(|e| {
+            error!("Failed to get models: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(OpenAIError::server_error(format!(
+                    "Failed to retrieve models: {}",
+                    e
+                ))),
+            )
+        })?;
 
     debug!("Successfully retrieved {} models", models.data.len());
     Ok(Json(models))
@@ -231,36 +265,45 @@ pub async fn create_chat_completion(
     // Check if streaming is requested
     if request.stream.unwrap_or(false) {
         // Handle streaming response
-        let stream = client
-            .create_chat_completion_stream(request)
-            .await
-            .map_err(|e| {
-                error!("Failed to create streaming chat completion: {}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(OpenAIError::server_error(format!(
-                        "Failed to create streaming completion: {}",
-                        e
-                    ))),
-                )
-            })?;
+        let request_timeout = state.config.request_timeout();
+        let stream = tokio::time::timeout(
+            request_timeout,
+            client.create_chat_completion_stream(request),
+        )
+        .await
+        .map_err(|_| timeout_response("Streaming chat completion request", request_timeout))?
+        .map_err(|e| {
+            error!("Failed to create streaming chat completion: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(OpenAIError::server_error(format!(
+                    "Failed to create streaming completion: {}",
+                    e
+                ))),
+            )
+        })?;
 
-        let sse_stream = create_sse_stream(stream);
+        let sse_stream = create_sse_stream(stream, state.config.stream_idle_timeout());
         Ok(Sse::new(sse_stream).into_response())
     } else {
         // Handle non-streaming response
         request.stream = Some(false); // Ensure it's explicitly false
 
-        let response = client.create_chat_completion(request).await.map_err(|e| {
-            error!("Failed to create chat completion: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(OpenAIError::server_error(format!(
-                    "Failed to create completion: {}",
-                    e
-                ))),
-            )
-        })?;
+        let request_timeout = state.config.request_timeout();
+        let response =
+            tokio::time::timeout(request_timeout, client.create_chat_completion(request))
+                .await
+                .map_err(|_| timeout_response("Chat completion request", request_timeout))?
+                .map_err(|e| {
+                    error!("Failed to create chat completion: {}", e);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(OpenAIError::server_error(format!(
+                            "Failed to create completion: {}",
+                            e
+                        ))),
+                    )
+                })?;
 
         debug!("Successfully created chat completion: {}", response.id);
         Ok(Json(response).into_response())
@@ -269,11 +312,30 @@ pub async fn create_chat_completion(
 
 fn create_sse_stream(
     mut stream: std::pin::Pin<Box<dyn Stream<Item = OpenSecretResult<ChatCompletionChunk>> + Send>>,
+    stream_idle_timeout: Duration,
 ) -> impl Stream<Item = Result<axum::response::sse::Event, Infallible>> {
     async_stream::stream! {
         use futures::StreamExt;
 
-        while let Some(chunk_result) = stream.next().await {
+        loop {
+            let chunk_result = match tokio::time::timeout(stream_idle_timeout, stream.next()).await {
+                Ok(Some(chunk_result)) => chunk_result,
+                Ok(None) => break,
+                Err(_) => {
+                    error!(
+                        "Streaming chat completion idle timed out after {} seconds",
+                        stream_idle_timeout.as_secs()
+                    );
+                    let error_event = axum::response::sse::Event::default()
+                        .data(format!(
+                            r#"{{"error": "Stream idle timeout after {} seconds"}}"#,
+                            stream_idle_timeout.as_secs()
+                        ));
+                    yield Ok(error_event);
+                    break;
+                }
+            };
+
             match chunk_result {
                 Ok(chunk) => {
                     match serde_json::to_string(&chunk) {
@@ -323,16 +385,20 @@ pub async fn create_embeddings(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
 
-    let response = client.create_embeddings(request).await.map_err(|e| {
-        error!("Failed to create embeddings: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(OpenAIError::server_error(format!(
-                "Failed to create embeddings: {}",
-                e
-            ))),
-        )
-    })?;
+    let request_timeout = state.config.request_timeout();
+    let response = tokio::time::timeout(request_timeout, client.create_embeddings(request))
+        .await
+        .map_err(|_| timeout_response("Embeddings request", request_timeout))?
+        .map_err(|e| {
+            error!("Failed to create embeddings: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(OpenAIError::server_error(format!(
+                    "Failed to create embeddings: {}",
+                    e
+                ))),
+            )
+        })?;
 
     debug!(
         "Successfully created embeddings with {} vectors",
@@ -353,6 +419,8 @@ mod tests {
             default_api_key: None,
             debug: false,
             enable_cors: false,
+            request_timeout_secs: 300,
+            stream_idle_timeout_secs: 300,
         }
     }
 
@@ -418,5 +486,27 @@ mod tests {
         state.remove_client_entry_if_same("key-a", &entry);
 
         assert!(!state.clients.contains_key("key-a"));
+    }
+
+    #[tokio::test]
+    async fn sse_stream_emits_error_when_idle_timeout_expires() {
+        use futures::{stream, StreamExt};
+
+        let backend_stream = Box::pin(stream::pending::<OpenSecretResult<ChatCompletionChunk>>());
+        let sse_stream = create_sse_stream(backend_stream, Duration::from_millis(1));
+        futures::pin_mut!(sse_stream);
+
+        assert!(
+            tokio::time::timeout(Duration::from_secs(1), sse_stream.next())
+                .await
+                .unwrap()
+                .is_some()
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_secs(1), sse_stream.next())
+                .await
+                .unwrap()
+                .is_some()
+        );
     }
 }
