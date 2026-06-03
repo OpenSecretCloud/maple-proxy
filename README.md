@@ -244,6 +244,8 @@ docker pull ghcr.io/opensecretcloud/maple-proxy:latest
 # Run with your API key
 docker run -p 8080:8080 \
   -e MAPLE_BACKEND_URL=https://enclave.trymaple.ai \
+  -e MAPLE_REQUEST_TIMEOUT_SECS=300 \
+  -e MAPLE_STREAM_IDLE_TIMEOUT_SECS=300 \
   ghcr.io/opensecretcloud/maple-proxy:latest
 ```
 
@@ -342,6 +344,8 @@ The Docker image:
 environment:
   - MAPLE_BACKEND_URL=https://enclave.trymaple.ai  # Production backend
   - MAPLE_ENABLE_CORS=true                         # Enable for web apps
+  - MAPLE_REQUEST_TIMEOUT_SECS=300                 # Backend request timeout
+  - MAPLE_STREAM_IDLE_TIMEOUT_SECS=300             # Streaming idle timeout
   - RUST_LOG=info                                  # Logging level
   # - MAPLE_API_KEY=xxx                            # Only for private deployments!
 ```

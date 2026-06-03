@@ -22,6 +22,8 @@ use tracing::{debug, error};
 const CLIENT_CACHE_MAX_ENTRIES: usize = 1024;
 const CLIENT_CACHE_ENTRY_TTL: Duration = Duration::from_secs(60 * 60);
 
+type ProxyError = (StatusCode, Json<OpenAIError>);
+
 struct CachedClientEntry {
     cell: OnceCell<Arc<OpenSecretClient>>,
     created_at: Instant,
@@ -74,10 +76,7 @@ impl ProxyState {
             .clone()
     }
 
-    async fn client_for_api_key(
-        &self,
-        api_key: &str,
-    ) -> Result<Arc<OpenSecretClient>, OpenAIError> {
+    async fn client_for_api_key(&self, api_key: &str) -> Result<Arc<OpenSecretClient>, ProxyError> {
         let cache_key = api_key.to_string();
         let client_entry = self.client_entry_for_api_key(&cache_key);
         let backend_url = self.config.backend_url.clone();
@@ -166,32 +165,36 @@ async fn create_client_with_auth(
     backend_url: &str,
     api_key: &str,
     request_timeout: Duration,
-) -> Result<OpenSecretClient, OpenAIError> {
-    let client = OpenSecretClient::new_with_api_key(backend_url, api_key.to_string())
-        .map_err(|e| OpenAIError::server_error(format!("Failed to create client: {}", e)))?;
+) -> Result<OpenSecretClient, ProxyError> {
+    let client =
+        OpenSecretClient::new_with_api_key(backend_url, api_key.to_string()).map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(OpenAIError::server_error(format!(
+                    "Failed to create client: {}",
+                    e
+                ))),
+            )
+        })?;
 
     // Perform attestation handshake
     tokio::time::timeout(request_timeout, client.perform_attestation_handshake())
         .await
-        .map_err(|_| {
-            error!(
-                "Attestation handshake timed out after {} seconds",
-                request_timeout.as_secs()
-            );
-            OpenAIError::server_error(format!(
-                "Timed out establishing secure connection with Maple backend after {} seconds",
-                request_timeout.as_secs()
-            ))
-        })?
+        .map_err(|_| timeout_response("Attestation handshake", request_timeout))?
         .map_err(|e| {
             error!("Attestation handshake failed: {}", e);
-            OpenAIError::server_error("Failed to establish secure connection with Maple backend")
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(OpenAIError::server_error(
+                    "Failed to establish secure connection with Maple backend",
+                )),
+            )
         })?;
 
     Ok(client)
 }
 
-fn timeout_response(operation: &str, timeout: Duration) -> (StatusCode, Json<OpenAIError>) {
+fn timeout_response(operation: &str, timeout: Duration) -> ProxyError {
     error!(
         "{} timed out after {} seconds",
         operation,
@@ -219,10 +222,7 @@ pub async fn list_models(
         &api_key[..8.min(api_key.len())]
     );
 
-    let client = state
-        .client_for_api_key(&api_key)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
+    let client = state.client_for_api_key(&api_key).await?;
 
     let request_timeout = state.config.request_timeout();
     let models = tokio::time::timeout(request_timeout, client.get_models())
@@ -257,10 +257,7 @@ pub async fn create_chat_completion(
         request.stream.unwrap_or(false)
     );
 
-    let client = state
-        .client_for_api_key(&api_key)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
+    let client = state.client_for_api_key(&api_key).await?;
 
     // Check if streaming is requested
     if request.stream.unwrap_or(false) {
@@ -316,11 +313,15 @@ fn create_sse_stream(
 ) -> impl Stream<Item = Result<axum::response::sse::Event, Infallible>> {
     async_stream::stream! {
         use futures::StreamExt;
+        let mut completed_normally = false;
 
         loop {
             let chunk_result = match tokio::time::timeout(stream_idle_timeout, stream.next()).await {
                 Ok(Some(chunk_result)) => chunk_result,
-                Ok(None) => break,
+                Ok(None) => {
+                    completed_normally = true;
+                    break;
+                }
                 Err(_) => {
                     error!(
                         "Streaming chat completion idle timed out after {} seconds",
@@ -363,10 +364,11 @@ fn create_sse_stream(
             }
         }
 
-        // Send [DONE] event to indicate end of stream
-        let done_event = axum::response::sse::Event::default()
-            .data("[DONE]");
-        yield Ok(done_event);
+        if completed_normally {
+            let done_event = axum::response::sse::Event::default()
+                .data("[DONE]");
+            yield Ok(done_event);
+        }
     }
 }
 
@@ -380,10 +382,7 @@ pub async fn create_embeddings(
 
     debug!("Embeddings request for model: {}", request.model);
 
-    let client = state
-        .client_for_api_key(&api_key)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
+    let client = state.client_for_api_key(&api_key).await?;
 
     let request_timeout = state.config.request_timeout();
     let response = tokio::time::timeout(request_timeout, client.create_embeddings(request))
@@ -506,7 +505,7 @@ mod tests {
             tokio::time::timeout(Duration::from_secs(1), sse_stream.next())
                 .await
                 .unwrap()
-                .is_some()
+                .is_none()
         );
     }
 }

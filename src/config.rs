@@ -41,7 +41,8 @@ pub struct Config {
     #[arg(
         long,
         env = "MAPLE_REQUEST_TIMEOUT_SECS",
-        default_value_t = DEFAULT_REQUEST_TIMEOUT_SECS
+        default_value_t = DEFAULT_REQUEST_TIMEOUT_SECS,
+        value_parser = clap::value_parser!(u64).range(1..)
     )]
     pub request_timeout_secs: u64,
 
@@ -49,7 +50,8 @@ pub struct Config {
     #[arg(
         long,
         env = "MAPLE_STREAM_IDLE_TIMEOUT_SECS",
-        default_value_t = DEFAULT_STREAM_IDLE_TIMEOUT_SECS
+        default_value_t = DEFAULT_STREAM_IDLE_TIMEOUT_SECS,
+        value_parser = clap::value_parser!(u64).range(1..)
     )]
     pub stream_idle_timeout_secs: u64,
 }
@@ -159,6 +161,7 @@ impl OpenAIError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::{error::ErrorKind, Parser};
 
     #[test]
     fn config_new_uses_timeout_defaults() {
@@ -195,5 +198,16 @@ mod tests {
 
         assert_eq!(config.request_timeout(), Duration::from_secs(45));
         assert_eq!(config.stream_idle_timeout(), Duration::from_secs(15));
+    }
+
+    #[test]
+    fn timeout_cli_values_must_be_positive() {
+        let request_timeout_error =
+            Config::try_parse_from(["maple-proxy", "--request-timeout-secs", "0"]).unwrap_err();
+        assert_eq!(request_timeout_error.kind(), ErrorKind::ValueValidation);
+
+        let stream_idle_timeout_error =
+            Config::try_parse_from(["maple-proxy", "--stream-idle-timeout-secs", "0"]).unwrap_err();
+        assert_eq!(stream_idle_timeout_error.kind(), ErrorKind::ValueValidation);
     }
 }
