@@ -80,6 +80,8 @@ Environment variables (can be set in .env file):
 - `MAPLE_API_KEY` - Default API key (optional)
 - `MAPLE_DEBUG` - Enable debug logging
 - `MAPLE_ENABLE_CORS` - Enable CORS for web clients
+- `MAPLE_REQUEST_TIMEOUT_SECS` - Backend request timeout in seconds (default: 300)
+- `MAPLE_STREAM_IDLE_TIMEOUT_SECS` - Streaming idle timeout in seconds (default: 300)
 
 ## Testing
 
