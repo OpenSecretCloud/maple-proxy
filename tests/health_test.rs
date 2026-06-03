@@ -6,14 +6,11 @@ use serde_json::Value;
 #[tokio::test]
 async fn test_health_check_endpoint() {
     // Create test config
-    let config = Config {
-        host: "127.0.0.1".to_string(),
-        port: 0, // Use random port for testing
-        backend_url: "http://localhost:3000".to_string(),
-        default_api_key: None,
-        debug: false,
-        enable_cors: false,
-    };
+    let config = Config::new(
+        "127.0.0.1".to_string(),
+        0, // Use random port for testing
+        "http://localhost:3000".to_string(),
+    );
 
     // Create test server
     let app = create_app(config);
@@ -31,14 +28,11 @@ async fn test_health_check_endpoint() {
 
 #[tokio::test]
 async fn test_root_health_check() {
-    let config = Config {
-        host: "127.0.0.1".to_string(),
-        port: 0,
-        backend_url: "http://localhost:3000".to_string(),
-        default_api_key: None,
-        debug: false,
-        enable_cors: false,
-    };
+    let config = Config::new(
+        "127.0.0.1".to_string(),
+        0,
+        "http://localhost:3000".to_string(),
+    );
 
     let app = create_app(config);
     let server = TestServer::new(app).unwrap();

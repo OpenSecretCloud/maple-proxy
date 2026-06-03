@@ -166,6 +166,8 @@ env:
     @echo "MAPLE_API_KEY: ${MAPLE_API_KEY:-[not set]}"
     @echo "MAPLE_DEBUG: ${MAPLE_DEBUG:-false}"
     @echo "MAPLE_ENABLE_CORS: ${MAPLE_ENABLE_CORS:-false}"
+    @echo "MAPLE_REQUEST_TIMEOUT_SECS: ${MAPLE_REQUEST_TIMEOUT_SECS:-300}"
+    @echo "MAPLE_STREAM_IDLE_TIMEOUT_SECS: ${MAPLE_STREAM_IDLE_TIMEOUT_SECS:-300}"
 
 # Build Docker image
 docker-build:
@@ -182,6 +184,8 @@ docker-run:
         -e MAPLE_BACKEND_URL=${MAPLE_BACKEND_URL:-https://enclave.trymaple.ai} \
         -e MAPLE_DEBUG=${MAPLE_DEBUG:-false} \
         -e MAPLE_ENABLE_CORS=${MAPLE_ENABLE_CORS:-true} \
+        -e MAPLE_REQUEST_TIMEOUT_SECS=${MAPLE_REQUEST_TIMEOUT_SECS:-300} \
+        -e MAPLE_STREAM_IDLE_TIMEOUT_SECS=${MAPLE_STREAM_IDLE_TIMEOUT_SECS:-300} \
         maple-proxy:latest
 
 # Run Docker container in detached mode
@@ -194,6 +198,8 @@ docker-run-detached:
         -e MAPLE_BACKEND_URL=${MAPLE_BACKEND_URL:-https://enclave.trymaple.ai} \
         -e MAPLE_DEBUG=${MAPLE_DEBUG:-false} \
         -e MAPLE_ENABLE_CORS=${MAPLE_ENABLE_CORS:-true} \
+        -e MAPLE_REQUEST_TIMEOUT_SECS=${MAPLE_REQUEST_TIMEOUT_SECS:-300} \
+        -e MAPLE_STREAM_IDLE_TIMEOUT_SECS=${MAPLE_STREAM_IDLE_TIMEOUT_SECS:-300} \
         maple-proxy:latest
     @echo "✅ Container started. Use 'just docker-stop' to stop it."
 
