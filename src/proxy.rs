@@ -5,22 +5,58 @@ use axum::{
     response::{IntoResponse, Response, Sse},
     Json,
 };
+use dashmap::DashMap;
 use futures::Stream;
 use opensecret::{
     ChatCompletionChunk, ChatCompletionRequest, EmbeddingRequest, EmbeddingResponse,
     ModelsResponse, OpenSecretClient, Result as OpenSecretResult,
 };
 use std::{convert::Infallible, sync::Arc};
+use tokio::sync::OnceCell;
 use tracing::{debug, error};
 
 #[derive(Clone)]
 pub struct ProxyState {
     pub config: Config,
+    clients: DashMap<String, Arc<OnceCell<Arc<OpenSecretClient>>>>,
 }
 
 impl ProxyState {
     pub fn new(config: Config) -> Self {
-        Self { config }
+        Self {
+            config,
+            clients: DashMap::new(),
+        }
+    }
+
+    fn client_cell_for_api_key(&self, api_key: &str) -> Arc<OnceCell<Arc<OpenSecretClient>>> {
+        self.clients
+            .entry(api_key.to_string())
+            .or_insert_with(|| Arc::new(OnceCell::new()))
+            .clone()
+    }
+
+    async fn client_for_api_key(
+        &self,
+        api_key: &str,
+    ) -> Result<Arc<OpenSecretClient>, OpenAIError> {
+        let client_cell = self.client_cell_for_api_key(api_key);
+        let backend_url = self.config.backend_url.clone();
+        let api_key = api_key.to_string();
+
+        let client = client_cell
+            .get_or_try_init(|| async move {
+                debug!(
+                    "Creating OpenSecret client for API key: {}...",
+                    &api_key[..8.min(api_key.len())]
+                );
+                create_client_with_auth(&backend_url, &api_key)
+                    .await
+                    .map(Arc::new)
+            })
+            .await?;
+
+        Ok(Arc::clone(client))
     }
 }
 
@@ -82,7 +118,8 @@ pub async fn list_models(
         &api_key[..8.min(api_key.len())]
     );
 
-    let client = create_client_with_auth(&state.config.backend_url, &api_key)
+    let client = state
+        .client_for_api_key(&api_key)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
 
@@ -115,7 +152,8 @@ pub async fn create_chat_completion(
         request.stream.unwrap_or(false)
     );
 
-    let client = create_client_with_auth(&state.config.backend_url, &api_key)
+    let client = state
+        .client_for_api_key(&api_key)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
 
@@ -209,7 +247,8 @@ pub async fn create_embeddings(
 
     debug!("Embeddings request for model: {}", request.model);
 
-    let client = create_client_with_auth(&state.config.backend_url, &api_key)
+    let client = state
+        .client_for_api_key(&api_key)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(e)))?;
 
@@ -229,4 +268,42 @@ pub async fn create_embeddings(
         response.data.len()
     );
     Ok(Json(response))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_config() -> Config {
+        Config {
+            host: "127.0.0.1".to_string(),
+            port: 0,
+            backend_url: "http://localhost:3000".to_string(),
+            default_api_key: None,
+            debug: false,
+            enable_cors: false,
+        }
+    }
+
+    #[test]
+    fn reuses_client_cell_for_same_api_key() {
+        let state = ProxyState::new(test_config());
+
+        let first = state.client_cell_for_api_key("key-a");
+        let second = state.client_cell_for_api_key("key-a");
+
+        assert!(Arc::ptr_eq(&first, &second));
+        assert_eq!(state.clients.len(), 1);
+    }
+
+    #[test]
+    fn keeps_client_cells_separate_by_api_key() {
+        let state = ProxyState::new(test_config());
+
+        let first = state.client_cell_for_api_key("key-a");
+        let second = state.client_cell_for_api_key("key-b");
+
+        assert!(!Arc::ptr_eq(&first, &second));
+        assert_eq!(state.clients.len(), 2);
+    }
 }

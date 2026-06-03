@@ -24,7 +24,7 @@ opensecret = "3.1.1"
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
-tokio = { version = "1.47", features = ["net", "rt-multi-thread", "macros"] }
+tokio = { version = "1.47", features = ["net", "rt-multi-thread", "macros", "sync"] }
 tower = { version = "0.5.2", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 
@@ -41,6 +41,7 @@ clap = { version = "4.5", features = ["derive", "env"] }
 dotenvy = "0.15"
 
 # Utilities
+dashmap = "6.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 anyhow = "1.0"
