@@ -4,6 +4,7 @@ use std::{net::SocketAddr, time::Duration};
 
 pub const DEFAULT_REQUEST_TIMEOUT_SECS: u64 = 300;
 pub const DEFAULT_STREAM_IDLE_TIMEOUT_SECS: u64 = 300;
+pub const DEFAULT_MAX_PAYLOAD_SIZE: usize = 2097152;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "maple-proxy")]
@@ -54,6 +55,15 @@ pub struct Config {
         value_parser = clap::value_parser!(u64).range(1..)
     )]
     pub stream_idle_timeout_secs: u64,
+
+    /// Max payload size for the proxy requests
+    #[arg(
+        long,
+        env = "MAPLE_MAX_PAYLOAD_SIZE",
+        default_value_t = DEFAULT_MAX_PAYLOAD_SIZE,
+        value_parser = clap::value_parser!(usize)
+    )]
+    pub max_payload_size: usize,
 }
 
 impl Config {
@@ -81,6 +91,7 @@ impl Config {
             enable_cors: false,
             request_timeout_secs: DEFAULT_REQUEST_TIMEOUT_SECS,
             stream_idle_timeout_secs: DEFAULT_STREAM_IDLE_TIMEOUT_SECS,
+            max_payload_size: DEFAULT_MAX_PAYLOAD_SIZE
         }
     }
 
