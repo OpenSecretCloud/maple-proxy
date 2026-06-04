@@ -8,6 +8,7 @@ use axum::{
     http::Method,
     routing::{get, post},
     Router,
+    extract::DefaultBodyLimit,
 };
 use std::sync::Arc;
 use tower::ServiceBuilder;
@@ -36,7 +37,7 @@ pub fn create_app(config: Config) -> Router {
                     .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                     .on_response(DefaultOnResponse::new().level(Level::INFO)),
             ),
-        );
+        ).layer(DefaultBodyLimit::max(config.max_payload_size));
 
     // Add CORS if enabled
     if config.enable_cors {
