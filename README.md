@@ -71,6 +71,7 @@ You should see:
    GET  /health              - Health check
    GET  /v1/models           - List available models
    POST /v1/chat/completions - Create chat completions (streaming)
+   POST /v1/embeddings       - Create embeddings
 ```
 
 ### API Endpoints
@@ -96,6 +97,17 @@ curl -N http://localhost:8080/v1/chat/completions \
 ```
 
 **Note:** Maple currently only supports streaming responses.
+
+#### Embeddings
+```bash
+curl http://localhost:8080/v1/embeddings \
+  -H "Authorization: Bearer YOUR_MAPLE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nomic-embed-text",
+    "input": "Generate an embedding for this text"
+  }'
+```
 
 ### Using as a Library
 
@@ -203,6 +215,15 @@ curl -N http://localhost:8080/v1/chat/completions \
     "model": "llama3-3-70b",
     "messages": [{"role": "user", "content": "Tell me a joke"}],
     "stream": true
+  }'
+
+# Embeddings
+curl http://localhost:8080/v1/embeddings \
+  -H "Authorization: Bearer YOUR_MAPLE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nomic-embed-text",
+    "input": "Generate an embedding for this text"
   }'
 ```
 
@@ -390,6 +411,7 @@ cargo test
 
 Maple Proxy supports all models available in the Maple/OpenSecret platform, including:
 - `llama3-3-70b` - Llama 3.3 70B parameter model
+- `nomic-embed-text` - Embedding model for `/v1/embeddings`
 - And many others - check `/v1/models` endpoint for current list
 
 ## 🔍 Troubleshooting

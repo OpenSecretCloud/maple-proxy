@@ -43,6 +43,7 @@ async fn main() -> anyhow::Result<()> {
     info!("   GET  /health              - Health check");
     info!("   GET  /v1/models           - List available models");
     info!("   POST /v1/chat/completions - Create chat completions (streaming & non-streaming)");
+    info!("   POST /v1/embeddings       - Create embeddings");
     info!("");
     info!("💡 Usage:");
     info!(
