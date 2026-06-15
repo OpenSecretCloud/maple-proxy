@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use axum_test::TestServer;
-use maple_proxy::{create_app, Config};
-use serde_json::Value;
+use maple_proxy::{create_app, Config, MAX_PROXY_REQUEST_BODY_BYTES};
+use serde_json::{json, Value};
 
 #[tokio::test]
 async fn test_health_check_endpoint() {
@@ -43,4 +43,34 @@ async fn test_root_health_check() {
 
     let json: Value = response.json();
     assert_eq!(json["status"], "ok");
+}
+
+#[tokio::test]
+async fn chat_completion_accepts_large_payloads_above_axum_default() {
+    assert_eq!(MAX_PROXY_REQUEST_BODY_BYTES, 50 * 1024 * 1024);
+
+    let config = Config::new(
+        "127.0.0.1".to_string(),
+        0,
+        "http://localhost:3000".to_string(),
+    );
+    let app = create_app(config);
+    let server = TestServer::new(app).unwrap();
+
+    let large_content = "x".repeat((2 * 1024 * 1024) + 1);
+    let response = server
+        .post("/v1/chat/completions")
+        .json(&json!({
+            "model": "quick",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": large_content
+                }
+            ],
+            "stream": false
+        }))
+        .await;
+
+    response.assert_status(StatusCode::UNAUTHORIZED);
 }
