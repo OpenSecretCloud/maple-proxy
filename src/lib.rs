@@ -5,6 +5,7 @@ pub use config::{Config, OpenAIError, OpenAIErrorDetails};
 use proxy::{create_chat_completion, create_embeddings, health_check, list_models, ProxyState};
 
 use axum::{
+    extract::DefaultBodyLimit,
     http::Method,
     routing::{get, post},
     Router,
@@ -16,6 +17,8 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tracing::Level;
+
+pub const MAX_PROXY_REQUEST_BODY_BYTES: usize = 50 * 1024 * 1024;
 
 /// Create the Axum application with the given configuration
 pub fn create_app(config: Config) -> Router {
@@ -31,11 +34,13 @@ pub fn create_app(config: Config) -> Router {
         .route("/v1/embeddings", post(create_embeddings))
         .with_state(state)
         .layer(
-            ServiceBuilder::new().layer(
-                TraceLayer::new_for_http()
-                    .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                    .on_response(DefaultOnResponse::new().level(Level::INFO)),
-            ),
+            ServiceBuilder::new()
+                .layer(DefaultBodyLimit::max(MAX_PROXY_REQUEST_BODY_BYTES))
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                        .on_response(DefaultOnResponse::new().level(Level::INFO)),
+                ),
         );
 
     // Add CORS if enabled
