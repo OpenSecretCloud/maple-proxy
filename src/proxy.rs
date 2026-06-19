@@ -409,6 +409,7 @@ pub async fn create_embeddings(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use opensecret::{EmbeddingData, EmbeddingUsage, EmbeddingValues};
 
     fn test_config() -> Config {
         Config {
@@ -507,5 +508,88 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[test]
+    fn embedding_response_with_floats_serializes_to_json() {
+        let response = EmbeddingResponse {
+            object: "list".to_string(),
+            data: vec![EmbeddingData {
+                object: "embedding".to_string(),
+                index: 0,
+                embedding: EmbeddingValues::Floats(vec![0.1, 0.2, 0.3]),
+            }],
+            model: "nomic-embed-text".to_string(),
+            usage: EmbeddingUsage {
+                prompt_tokens: 5,
+                total_tokens: 5,
+            },
+        };
+
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["object"], "list");
+        assert_eq!(json["data"][0]["object"], "embedding");
+        assert_eq!(json["data"][0]["embedding"], serde_json::json!([0.1, 0.2, 0.3]));
+        assert_eq!(json["data"][0]["index"], 0);
+    }
+
+    #[test]
+    fn embedding_response_with_base64_serializes_to_json() {
+        let response = EmbeddingResponse {
+            object: "list".to_string(),
+            data: vec![EmbeddingData {
+                object: "embedding".to_string(),
+                index: 0,
+                embedding: EmbeddingValues::Base64("AQIDBA==".to_string()),
+            }],
+            model: "nomic-embed-text".to_string(),
+            usage: EmbeddingUsage {
+                prompt_tokens: 5,
+                total_tokens: 5,
+            },
+        };
+
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(json["object"], "list");
+        assert_eq!(json["data"][0]["object"], "embedding");
+        assert_eq!(json["data"][0]["embedding"], "AQIDBA==");
+        assert_eq!(json["data"][0]["index"], 0);
+    }
+
+    #[test]
+    fn embedding_response_round_trips_through_json() {
+        let response = EmbeddingResponse {
+            object: "list".to_string(),
+            data: vec![
+                EmbeddingData {
+                    object: "embedding".to_string(),
+                    index: 0,
+                    embedding: EmbeddingValues::Floats(vec![0.1, 0.2, 0.3]),
+                },
+                EmbeddingData {
+                    object: "embedding".to_string(),
+                    index: 1,
+                    embedding: EmbeddingValues::Base64("AQIDBA==".to_string()),
+                },
+            ],
+            model: "nomic-embed-text".to_string(),
+            usage: EmbeddingUsage {
+                prompt_tokens: 10,
+                total_tokens: 10,
+            },
+        };
+
+        let json_str = serde_json::to_string(&response).unwrap();
+        let deserialized: EmbeddingResponse = serde_json::from_str(&json_str).unwrap();
+
+        assert_eq!(deserialized.data.len(), 2);
+        match &deserialized.data[0].embedding {
+            EmbeddingValues::Floats(v) => assert_eq!(v, &[0.1, 0.2, 0.3]),
+            _ => panic!("Expected Floats variant"),
+        }
+        match &deserialized.data[1].embedding {
+            EmbeddingValues::Base64(s) => assert_eq!(s, "AQIDBA=="),
+            _ => panic!("Expected Base64 variant"),
+        }
     }
 }
