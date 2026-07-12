@@ -44,7 +44,7 @@ dotenvy = "0.15"
 dashmap = "6.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
-anyhow = "1.0"
+anyhow = "1.0.103"
 
 # HTTP types and headers
 http = "1.0"
