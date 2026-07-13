@@ -1,8 +1,8 @@
-pub mod config;
-pub mod proxy;
+mod config;
+mod proxy;
 
-pub use config::{Config, OpenAIError, OpenAIErrorDetails};
-use proxy::{create_chat_completion, create_embeddings, health_check, list_models, ProxyState};
+pub use config::Config;
+use proxy::{health_check, proxy_openai_request, ProxyState};
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -18,20 +18,23 @@ use tower_http::{
 };
 use tracing::Level;
 
-pub const MAX_PROXY_REQUEST_BODY_BYTES: usize = 50 * 1024 * 1024;
+const MAX_PROXY_REQUEST_BODY_BYTES: usize = 50 * 1024 * 1024;
 
 /// Create the Axum application with the given configuration
 pub fn create_app(config: Config) -> Router {
     let state = Arc::new(ProxyState::new(config.clone()));
+    create_app_with_state(config, state)
+}
 
+pub(crate) fn create_app_with_state(config: Config, state: Arc<ProxyState>) -> Router {
     let mut app = Router::new()
         // Health check endpoints
         .route("/health", get(health_check))
         .route("/", get(health_check))
         // OpenAI-compatible endpoints
-        .route("/v1/models", get(list_models))
-        .route("/v1/chat/completions", post(create_chat_completion))
-        .route("/v1/embeddings", post(create_embeddings))
+        .route("/v1/models", get(proxy_openai_request))
+        .route("/v1/chat/completions", post(proxy_openai_request))
+        .route("/v1/embeddings", post(proxy_openai_request))
         .with_state(state)
         .layer(
             ServiceBuilder::new()

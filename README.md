@@ -1,14 +1,17 @@
 # 🍁 Maple Proxy
 
-A lightweight OpenAI-compatible proxy server for Maple/OpenSecret's TEE infrastructure. Works with **any** OpenAI client library while providing the security and privacy benefits of Trusted Execution Environment (TEE) processing.
+A lightweight proxy for Maple/OpenSecret's OpenAI-compatible inference
+endpoints, with the security and privacy benefits of Trusted Execution
+Environment (TEE) processing.
 
 ## 🚀 Features
 
-- **100% OpenAI Compatible** - Drop-in replacement for OpenAI API
+- **OpenAI-Compatible Surface** - Models, chat completions, and embeddings endpoints
 - **Secure TEE Processing** - All requests processed in secure enclaves
-- **Streaming Support** - Full Server-Sent Events streaming for chat completions
+- **Lossless Chat Parameters** - Provider-specific request fields pass through unchanged
+- **Streaming and Non-Streaming** - Supports both chat completion response modes
 - **Flexible Authentication** - Environment variables or per-request API keys
-- **Zero Client Changes** - Works with existing OpenAI client code
+- **Familiar Clients** - Point compatible OpenAI clients at the proxy base URL
 - **Lightweight** - Minimal overhead, maximum performance
 - **CORS Support** - Ready for web applications
 
@@ -30,7 +33,7 @@ Add to your `Cargo.toml`:
 [dependencies]
 maple-proxy = { git = "https://github.com/opensecretcloud/maple-proxy" }
 # Or if published to crates.io:
-# maple-proxy = "0.1.0"
+# maple-proxy = "0.2.0"
 ```
 
 ## ⚙️ Configuration
@@ -40,7 +43,7 @@ Set environment variables or use command-line arguments:
 ```bash
 # Environment Variables
 export MAPLE_HOST=127.0.0.1                    # Server host (default: 127.0.0.1)
-export MAPLE_PORT=3000                         # Server port (default: 3000)
+export MAPLE_PORT=8080                         # Server port (default: 8080)
 export MAPLE_BACKEND_URL=http://localhost:3000         # Maple backend URL (prod: https://enclave.trymaple.ai)
 export MAPLE_API_KEY=your-maple-api-key        # Default API key (optional)
 export MAPLE_DEBUG=true                        # Enable debug logging
@@ -70,7 +73,7 @@ You should see:
 📋 Available endpoints:
    GET  /health              - Health check
    GET  /v1/models           - List available models
-   POST /v1/chat/completions - Create chat completions (streaming)
+   POST /v1/chat/completions - Create chat completions (streaming & non-streaming)
    POST /v1/embeddings       - Create embeddings
 ```
 
@@ -82,7 +85,7 @@ curl http://localhost:8080/v1/models \
   -H "Authorization: Bearer YOUR_MAPLE_API_KEY"
 ```
 
-#### Chat Completions (Streaming)
+#### Chat Completions
 ```bash
 curl -N http://localhost:8080/v1/chat/completions \
   -H "Authorization: Bearer YOUR_MAPLE_API_KEY" \
@@ -96,7 +99,9 @@ curl -N http://localhost:8080/v1/chat/completions \
   }'
 ```
 
-**Note:** Maple currently only supports streaming responses.
+Set `stream` to `true` for Server-Sent Events or `false` for one JSON response.
+Additional provider-specific JSON fields are forwarded without being parsed or
+rewritten by the proxy or Rust SDK.
 
 #### Embeddings
 ```bash

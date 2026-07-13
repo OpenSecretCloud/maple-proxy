@@ -1,5 +1,5 @@
 use clap::Parser;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::{net::SocketAddr, time::Duration};
 
 pub const DEFAULT_REQUEST_TIMEOUT_SECS: u64 = 300;
@@ -123,22 +123,22 @@ impl Config {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OpenAIError {
-    pub error: OpenAIErrorDetails,
+#[derive(Debug, Serialize)]
+pub(crate) struct OpenAIError {
+    error: OpenAIErrorDetails,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OpenAIErrorDetails {
-    pub message: String,
+#[derive(Debug, Serialize)]
+struct OpenAIErrorDetails {
+    message: String,
     #[serde(rename = "type")]
-    pub error_type: String,
-    pub param: Option<String>,
-    pub code: Option<String>,
+    error_type: String,
+    param: Option<String>,
+    code: Option<String>,
 }
 
 impl OpenAIError {
-    pub fn new(message: impl Into<String>, error_type: impl Into<String>) -> Self {
+    fn new(message: impl Into<String>, error_type: impl Into<String>) -> Self {
         Self {
             error: OpenAIErrorDetails {
                 message: message.into(),
@@ -149,11 +149,11 @@ impl OpenAIError {
         }
     }
 
-    pub fn authentication_error(message: impl Into<String>) -> Self {
+    pub(crate) fn authentication_error(message: impl Into<String>) -> Self {
         Self::new(message, "invalid_request_error")
     }
 
-    pub fn server_error(message: impl Into<String>) -> Self {
+    pub(crate) fn server_error(message: impl Into<String>) -> Self {
         Self::new(message, "server_error")
     }
 }
