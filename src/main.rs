@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     info!(
         "   Set MAPLE_API_KEY environment variable or provide Authorization: Bearer <key> header"
     );
-    info!("   Compatible with any OpenAI client library!");
+    info!("   OpenAI-compatible clients can use this proxy as their base URL");
     info!("");
     info!("🔗 Example curl:");
     info!("   curl http://{} \\", config.socket_addr()?);

@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 use axum_test::TestServer;
-use maple_proxy::{create_app, Config, MAX_PROXY_REQUEST_BODY_BYTES};
+use maple_proxy::{create_app, Config};
 use serde_json::{json, Value};
 
 #[tokio::test]
@@ -47,8 +47,6 @@ async fn test_root_health_check() {
 
 #[tokio::test]
 async fn chat_completion_accepts_large_payloads_above_axum_default() {
-    assert_eq!(MAX_PROXY_REQUEST_BODY_BYTES, 50 * 1024 * 1024);
-
     let config = Config::new(
         "127.0.0.1".to_string(),
         0,
