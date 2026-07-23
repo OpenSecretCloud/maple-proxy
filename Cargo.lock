@@ -1638,7 +1638,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 [[package]]
 name = "opensecret"
 version = "3.4.0"
-source = "git+https://github.com/OpenSecretCloud/OpenSecret-SDK?rev=94bfc4efa2cd513b160a0fbefc1acf7af77e49bc#94bfc4efa2cd513b160a0fbefc1acf7af77e49bc"
+source = "git+https://github.com/OpenSecretCloud/OpenSecret-SDK?rev=61eccfc3eda56e9b492077487c020949bf1a6566#61eccfc3eda56e9b492077487c020949bf1a6566"
 dependencies = [
  "aes-gcm",
  "anyhow",
