@@ -61,7 +61,8 @@ run-with-backend url:
 
 # Run pointing to local backend
 run-local:
-    @just run-with-backend "http://localhost:3000"
+    @echo "🚧 Starting with development-only mock attestation enabled"
+    @bash -c 'set -a; source .env 2>/dev/null; set +a; MAPLE_BACKEND_URL=http://localhost:3000 cargo run --features insecure-local-mock-attestation'
 
 # Run pointing to production backend
 run-prod:
