@@ -1638,8 +1638,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 [[package]]
 name = "opensecret"
 version = "3.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7652ddb1661444ea0cbacacbc62c13f5073f1687a2e765e0195ebf29d3e394d"
+source = "git+https://github.com/OpenSecretCloud/OpenSecret-SDK?rev=94bfc4efa2cd513b160a0fbefc1acf7af77e49bc#94bfc4efa2cd513b160a0fbefc1acf7af77e49bc"
 dependencies = [
  "aes-gcm",
  "anyhow",

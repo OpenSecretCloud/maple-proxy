@@ -55,11 +55,40 @@ Maple Proxy is a lightweight OpenAI-compatible proxy server that forwards reques
    - Handles streaming responses for chat completions
    - Transforms responses to OpenAI format
 
+### TEE attestation boundary
+
+TEE measurement authorization is owned by the OpenSecret SDK. Maple Proxy
+should only call `perform_attestation_handshake`; do not add a proxy-specific
+PCR allowlist or Sigstore/Rekor verifier.
+
+The intended SDK handshake authenticates the AWS Nitro attestation document,
+compares the complete PCR0/PCR1/PCR2 tuple with a release snapshot embedded in
+the SDK, and only then accepts the enclave public key and performs key exchange.
+There is no runtime Sigstore/Rekor or release-metadata network lookup. At SDK
+update time, the updater verifies the release manifest and Cosign bundle,
+including the expected signing identity and Rekor evidence, before generating
+the embedded snapshot.
+
+Mock attestation is available only through the explicitly named
+`insecure-local-mock-attestation` Cargo feature. Keep it disabled in release,
+Docker, and embedded Maple builds; only `just run-local` opts in.
+
+Rekor supplies tamper-evident transparency-log evidence for the signed release
+statement used to generate that snapshot. It does not itself prove Nix
+reproducibility, release freshness, rollback prevention, or revocation.
+
+This integration branch pins an exact reviewed SDK commit with default features
+disabled. That staging commit deliberately contains an empty release snapshot,
+so remote handshakes fail closed. Before release, replace the pin with a
+snapshot-bearing reviewed commit or published crate; do not invent an
+unpublished version or vendor the SDK here.
+
 ### Request Flow
 
 1. Client sends OpenAI-compatible request to proxy
 2. Proxy extracts API key (from header or default config)
-3. Creates OpenSecret client and performs TEE attestation
+3. Creates an OpenSecret client and delegates TEE authentication, release
+   authorization, and key exchange to the SDK
 4. Forwards request to Maple backend (enclave.trymaple.ai or configured URL)
 5. Streams response back to client in OpenAI format
 
