@@ -35,7 +35,7 @@ insecure-local-mock-attestation = ["opensecret/mock-attestation"]
 
 [dependencies]
 # OpenSecret SDK
-opensecret = { git = "https://github.com/OpenSecretCloud/OpenSecret-SDK", rev = "61eccfc3eda56e9b492077487c020949bf1a6566", default-features = false }
+opensecret = { git = "https://github.com/OpenSecretCloud/OpenSecret-SDK", rev = "1bd7196043b26b3a2f8080534bd14031afcd5cc8", default-features = false }
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }
