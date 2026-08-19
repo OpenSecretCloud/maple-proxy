@@ -1,6 +1,6 @@
 [package]
 name = "maple-proxy"
-version = "0.2.0"
+version = "0.3.1"
 edition = "2021"
 authors = ["OpenSecret"]
 description = "Lightweight OpenAI-compatible proxy server for Maple/OpenSecret TEE infrastructure"
@@ -35,7 +35,7 @@ insecure-local-mock-attestation = ["opensecret/mock-attestation"]
 
 [dependencies]
 # OpenSecret SDK
-opensecret = { git = "https://github.com/OpenSecretCloud/OpenSecret-SDK", rev = "1bd7196043b26b3a2f8080534bd14031afcd5cc8", default-features = false }
+opensecret = { git = "https://github.com/OpenSecretCloud/OpenSecret-SDK", rev = "8ecd1a31803f45753ed6ac457a4d8553389b2336", default-features = false }
 
 # Web server
 axum = { version = "0.8.4", features = ["http2", "macros"] }

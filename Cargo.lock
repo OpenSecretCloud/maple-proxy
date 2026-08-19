@@ -1445,7 +1445,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "maple-proxy"
-version = "0.2.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1637,8 +1637,8 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "opensecret"
-version = "3.4.0"
-source = "git+https://github.com/OpenSecretCloud/OpenSecret-SDK?rev=1bd7196043b26b3a2f8080534bd14031afcd5cc8#1bd7196043b26b3a2f8080534bd14031afcd5cc8"
+version = "3.6.1"
+source = "git+https://github.com/OpenSecretCloud/OpenSecret-SDK?rev=8ecd1a31803f45753ed6ac457a4d8553389b2336#8ecd1a31803f45753ed6ac457a4d8553389b2336"
 dependencies = [
  "aes-gcm",
  "anyhow",
