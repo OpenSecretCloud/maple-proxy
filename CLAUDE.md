@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+> **Legacy checkout:** new development belongs in
+> [MaplePrivacyLabs/Maple's `proxy/`](https://github.com/MaplePrivacyLabs/Maple/tree/master/proxy).
+> Follow that repository's current contributor guidance. The instructions
+> below describe this retained standalone source; see [README.md](README.md)
+> for the release and container transition.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview

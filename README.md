@@ -1,5 +1,30 @@
 # 🍁 Maple Proxy
 
+> **Development moved to [MaplePrivacyLabs/Maple, under `proxy/`](https://github.com/MaplePrivacyLabs/Maple/tree/master/proxy).**
+> Use the [current proxy guide](https://github.com/MaplePrivacyLabs/Maple/blob/master/proxy/README.md)
+> for installation, configuration, source builds, and contributions.
+> New issues and pull requests belong in the monorepo.
+
+Native proxy archives are distributed with
+[Maple releases](https://github.com/MaplePrivacyLabs/Maple/releases); there is no
+new standalone proxy release stream here. Existing standalone releases and
+`ghcr.io/opensecretcloud/maple-proxy` images remain historical artifacts. The
+legacy container publisher is disabled, so its `latest` tag does not track
+future Maple releases.
+
+Future container publications target `ghcr.io/mapleprivacylabs/maple-proxy`.
+The first publication and public-pull verification in that namespace are still
+pending. Keep existing deployments on their working image until a replacement
+has been published and verified; do not assume the new `latest` exists. Follow
+the [current container instructions](https://github.com/MaplePrivacyLabs/Maple/blob/master/proxy/README.md#-docker-deployment)
+for the transition.
+
+The source and documentation below describe the legacy standalone checkout.
+Existing issues and draft pull requests remain here until their disposition is
+recorded; this notice does not close or port them.
+
+## Legacy standalone reference
+
 A lightweight proxy for Maple/OpenSecret's OpenAI-compatible inference
 endpoints, with the security and privacy benefits of Trusted Execution
 Environment (TEE) processing.
